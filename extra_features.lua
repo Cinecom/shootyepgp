@@ -81,3 +81,33 @@ ChatFrame_OnEvent = function(event)
     -- Call original handler for all other messages
     originalChatFrame_OnEvent(event)
 end
+
+
+if event == "ADDON_LOADED" then
+    -- default ON
+    if sepgp_sound == nil then sepgp_sound = true end
+
+    -- seed RNG once per session
+    math.randomseed(GetTime() * 1000)
+    math.random(); math.random(); math.random()
+
+    -- /epgp sound on|off
+    SLASH_EPGP1 = "/epgp"
+    SlashCmdList["EPGP"] = function(msg)
+        msg = (msg or ""):lower()
+        local cmd, arg = msg:match("^(%S+)%s*(.*)$")
+        if cmd == "sound" then
+            if arg == "on" then
+                sepgp_sound = true
+                DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00EPGP: sound ON|r")
+            elseif arg == "off" then
+                sepgp_sound = false
+                DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00EPGP: sound OFF|r")
+            else
+                DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00Usage: /epgp sound on|off|r")
+            end
+        else
+            DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00Usage: /epgp sound on|off|r")
+        end
+    end
+end
