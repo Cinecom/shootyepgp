@@ -1,3 +1,60 @@
+
+-- SYSMSG
+local function GetGuildRankForPlayer(name)
+    if not IsInGuild() then return nil end
+    
+    GuildRoster() -- Update guild data
+    local numMembers = GetNumGuildMembers(true)
+    
+    for i = 1, numMembers do
+        local memberName, rank = GetGuildRosterInfo(i)
+        local shortName = memberName
+        local dashPos = string.find(memberName or "", "-")
+        if dashPos then
+            shortName = string.sub(memberName, 1, dashPos - 1)
+        end
+        
+        if shortName == name then
+            return rank
+        end
+    end
+    return nil
+end
+
+
+local frame = CreateFrame("Frame", "FakeSysFrame")
+frame:RegisterEvent("CHAT_MSG_ADDON")
+
+
+frame:SetScript("OnEvent", function()
+    if event == "CHAT_MSG_ADDON" then
+        if arg1 == "FakeSys" then
+            -- Display the fake system message
+            DEFAULT_CHAT_FRAME:AddMessage(arg2, 1.0, 1.0, 0.0)
+        end
+    end
+end)
+
+-- Slash command handler
+local function FakeSysHandler(msg)
+    -- Check if player is an officer
+    local playerName = UnitName("player")
+    local rank = GetGuildRankForPlayer(playerName)
+    
+    if not rank or (rank ~= "Officer") then
+        return
+    end
+    
+    if msg and msg ~= "" then
+        SendAddonMessage("FakeSys", msg, "GUILD")
+    end
+end
+
+-- Register the slash command
+SLASH_FAKESYS1 = "/fakesys"
+SlashCmdList["FAKESYS"] = FakeSysHandler
+
+
 -- PARSE ID
 SLASH_PARSEID1 = "/parseid"
 
@@ -16,9 +73,8 @@ end
 
 
 
--- Guild Rank for Roll Messages - 1.12 Compatible Version
 
--- Create frame to catch events
+-- ROLL COLORS
 local f = CreateFrame("Frame")
 f:RegisterEvent("CHAT_MSG_SYSTEM")
 
@@ -83,31 +139,30 @@ ChatFrame_OnEvent = function(event)
 end
 
 
-if event == "ADDON_LOADED" then
-    -- default ON
-    if sepgp_sound == nil then sepgp_sound = true end
 
-    -- seed RNG once per session
-    math.randomseed(GetTime() * 1000)
-    math.random(); math.random(); math.random()
+-- Turn loot sounds on/off
+if sepgp_sound == nil then
+    sepgp_sound = 1 
+end
 
-    -- /epgp sound on|off
-    SLASH_EPGP1 = "/epgp"
-    SlashCmdList["EPGP"] = function(msg)
-        msg = (msg or ""):lower()
-        local cmd, arg = msg:match("^(%S+)%s*(.*)$")
-        if cmd == "sound" then
-            if arg == "on" then
-                sepgp_sound = true
-                DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00EPGP: sound ON|r")
-            elseif arg == "off" then
-                sepgp_sound = false
-                DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00EPGP: sound OFF|r")
-            else
-                DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00Usage: /epgp sound on|off|r")
-            end
-        else
-            DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00Usage: /epgp sound on|off|r")
-        end
+-- Slash command handler function
+local function HandleLootSoundCommand(msg)
+    local command
+    if msg then
+        command = string.lower(msg)
+    else
+        command = ""
+    end
+    
+    if command == "on" then
+        sepgp_sound = 1
+        DEFAULT_CHAT_FRAME:AddMessage("Loot sounds |cFF00FF00enabled|r")
+    elseif command == "off" then
+        sepgp_sound = 0
+        DEFAULT_CHAT_FRAME:AddMessage("Loot sounds |cFFFF0000disabled|r (" .. UnitName("player") .. ", you're boring)")
     end
 end
+
+-- Register the slash commands
+SLASH_LOOTSOUND1 = "/lootsound"
+SlashCmdList["LOOTSOUND"] = HandleLootSoundCommand

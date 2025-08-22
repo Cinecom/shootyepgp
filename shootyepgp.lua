@@ -989,8 +989,12 @@ function sepgp:bidPrint(link, masterlooter, need, greed, bid)
   local msg = string.format(L["Click $MS or $PRIOOS or $OS for %s"], link)
   math.randomseed(GetTime() * 1000)
  
-  local randomSound = math.random(1, 24)
-  PlaySoundFile("Interface\\AddOns\\shootyepgp\\Sounds\\loot-" .. randomSound .. ".wav")
+  local randomSound = math.random(1, 25)
+  if sepgp_sound == 1 then
+
+      PlaySoundFile("Interface\\AddOns\\shootyepgp\\Sounds\\loot-" .. randomSound .. ".wav")
+
+  end
   
 
   -- Decide which placeholders to keep/remove based on need/greed/bid
