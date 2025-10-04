@@ -1,10 +1,10 @@
 # Fork for the < ERROR > guild (Turtle WoW)
 - Displays Player Rank in bid window and in a /roll
 - Corrected Pricelist including custom Turtle WoW items
-- Shows item ID's
+- Shows item ID's in tooltips
 - Ability to look up an item's ID by typing ``/parseid [ITEM_LINK]`` in game
-- Bid option: OS PRIO
-- Sound plays when loot is announced
+- New Bid option: OS PRIO
+- Sound plays when loot is announced (turn off/on with command ``/lootsound [on/off]``
 
 
 # shootyepgp
