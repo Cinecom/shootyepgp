@@ -4,7 +4,7 @@
 - Shows item ID's in tooltips
 - Ability to look up an item's ID by typing ``/parseid [ITEM_LINK]`` in game
 - New Bid option: OS PRIO
-- Sound plays when loot is announced (turn off/on with command ``/lootsound [on/off]``
+- Sound plays when loot is announced: Turn off/on with command ``/lootsound [on/off]``
 
 
 # shootyepgp
