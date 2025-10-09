@@ -12,6 +12,9 @@ local groupings = {
   "sepgp_groupbyarmor",
   "sepgp_groupbyrole",
 }
+-- Column sorting state
+local sort_column = "pr"  -- default sort by PR
+local sort_direction = "desc"  -- default descending
 local PLATE, MAIL, LEATHER, CLOTH = 4,3,2,1
 local DPS, CASTER, HEALER, TANK = 4,3,2,1
 local class_to_armor = {
@@ -195,7 +198,7 @@ function sepgp_standings:getRolesClass(roster)
   local roster_num = table.getn(roster)
   for i=1,roster_num do
     local player = roster[i]
-    local name, lclass, armor_class, ep, gp, pr = unpack(player)
+    local name, lclass, armor_class, ep, gp, pr, rankName = unpack(player)
     local class = class_cache[lclass]
     local roles = class_to_role[class]
     if not (roles) then
@@ -205,9 +208,9 @@ function sepgp_standings:getRolesClass(roster)
         if i==1 then
           player[3]=role
         else
-          table.insert(roster,{player[1],player[2],role,player[4],player[5],player[6]})
+          table.insert(roster,{player[1],player[2],role,player[4],player[5],player[6],player[7]})
         end
-      end      
+      end
     end
   end
   return roster
@@ -225,11 +228,30 @@ function sepgp_standings:OnEnable()
       "cantAttach", true,
       "menu", function()
         D:AddLine(
+          "text", "Sort by EP",
+          "tooltipText", "Sort standings by EP.",
+          "checked", sort_column == "ep",
+          "func", function() sepgp_standings:SetColumnSort("ep") end
+        )
+        D:AddLine(
+          "text", "Sort by GP",
+          "tooltipText", "Sort standings by GP.",
+          "checked", sort_column == "gp",
+          "func", function() sepgp_standings:SetColumnSort("gp") end
+        )
+        D:AddLine(
+          "text", "Sort by PR",
+          "tooltipText", "Sort standings by PR.",
+          "checked", sort_column == "pr",
+          "func", function() sepgp_standings:SetColumnSort("pr") end
+        )
+        D:AddLine()
+        D:AddLine(
           "text", L["Raid Only"],
           "tooltipText", L["Only show members in raid."],
           "checked", sepgp_raidonly,
           "func", function() sepgp_standings:ToggleRaidOnly() end
-        )      
+        )
         D:AddLine(
           "text", L["Group by class"],
           "tooltipText", L["Group members by class."],
@@ -248,6 +270,7 @@ function sepgp_standings:OnEnable()
           "checked", sepgp_groupbyrole,
           "func", function() sepgp_standings:ToggleGroupBy("sepgp_groupbyrole") end
         )
+        D:AddLine()
         D:AddLine(
           "text", L["Refresh"],
           "tooltipText", L["Refresh window"],
@@ -365,6 +388,62 @@ local pr_sorter_standings = function(a,b)
   end
 end
 
+-- Column sorting functions
+local function sort_by_ep(a, b)
+  if sort_direction == "desc" then
+    return tonumber(a[4]) > tonumber(b[4])
+  else
+    return tonumber(a[4]) < tonumber(b[4])
+  end
+end
+
+local function sort_by_gp(a, b)
+  if sort_direction == "desc" then
+    return tonumber(a[5]) > tonumber(b[5])
+  else
+    return tonumber(a[5]) < tonumber(b[5])
+  end
+end
+
+local function sort_by_pr(a, b)
+  if sort_direction == "desc" then
+    return tonumber(a[6]) > tonumber(b[6])
+  else
+    return tonumber(a[6]) < tonumber(b[6])
+  end
+end
+
+-- Toggle column sort
+function sepgp_standings:SetColumnSort(column)
+  if sort_column == column then
+    -- Toggle direction if clicking same column
+    if sort_direction == "desc" then
+      sort_direction = "asc"
+    else
+      sort_direction = "desc"
+    end
+  else
+    -- New column, default to descending
+    sort_column = column
+    sort_direction = "desc"
+  end
+  self:Top()
+  self:Refresh()
+end
+
+-- Sort functions for Tablet callbacks
+function sepgp_standings:SortByEP()
+  self:SetColumnSort("ep")
+end
+
+function sepgp_standings:SortByGP()
+  self:SetColumnSort("gp")
+end
+
+function sepgp_standings:SortByPR()
+  self:SetColumnSort("pr")
+end
+
 function sepgp_standings:BuildStandingsTable()
   local t = { }
   local r = { }
@@ -402,35 +481,76 @@ function sepgp_standings:BuildStandingsTable()
       end
     end
   end
+  -- Determine which sort function to use based on selected column
+  local sort_func
+  if sort_column == "ep" then
+    sort_func = sort_by_ep
+  elseif sort_column == "gp" then
+    sort_func = sort_by_gp
+  elseif sort_column == "pr" then
+    sort_func = sort_by_pr
+  else
+    sort_func = pr_sorter_standings
+  end
+
   if (sepgp_groupbyclass) then
     table.sort(t, function(a,b)
       if (a[2] ~= b[2]) then return a[2] > b[2]
-      else return pr_sorter_standings(a,b) end
+      else return sort_func(a,b) end
     end)
   elseif (sepgp_groupbyarmor) then
     table.sort(t, function(a,b)
       if (a[3] ~= b[3]) then return a[3] > b[3]
-      else return pr_sorter_standings(a,b) end
+      else return sort_func(a,b) end
     end)
   elseif (sepgp_groupbyrole) then
     t = self:getRolesClass(t)
     table.sort(t, function(a,b)
       if (a[3] ~= b[3]) then return a[3] > b[3]
-      else return pr_sorter_standings(a,b) end
+      else return sort_func(a,b) end
     end)
   else
-    table.sort(t, pr_sorter_standings)
+    table.sort(t, sort_func)
   end
   return t
 end
 
 function sepgp_standings:OnTooltipUpdate()
+  -- Build column headers with sort indicators
+  local ep_indicator = ""
+  local gp_indicator = ""
+  local pr_indicator = ""
+
+  if sort_column == "ep" then
+    if sort_direction == "desc" then
+      ep_indicator = " \226\150\188"  -- down arrow
+    else
+      ep_indicator = " \226\150\178"  -- up arrow
+    end
+  end
+
+  if sort_column == "gp" then
+    if sort_direction == "desc" then
+      gp_indicator = " \226\150\188"
+    else
+      gp_indicator = " \226\150\178"  -- up arrow
+    end
+  end
+
+  if sort_column == "pr" then
+    if sort_direction == "desc" then
+      pr_indicator = " \226\150\188"
+    else
+      pr_indicator = " \226\150\178"  -- up arrow
+    end
+  end
+
   local cat = T:AddCategory(
       "columns", 4,
       "text",  C:Orange(L["Name"]),   "child_textR",    1, "child_textG",    1, "child_textB",    1, "child_justify",  "LEFT",
-      "text2", C:Orange(L["ep"]),     "child_text2R",   1, "child_text2G",   1, "child_text2B",   1, "child_justify2", "RIGHT",
-      "text3", C:Orange(L["gp"]),     "child_text3R",   1, "child_text3G",   1, "child_text3B",   1, "child_justify3", "RIGHT",
-      "text4", C:Orange(L["pr"]),     "child_text4R",   1, "child_text4G",   1, "child_text4B",   0, "child_justify4", "RIGHT"
+      "text2", C:Orange(L["ep"] .. ep_indicator),     "child_text2R",   1, "child_text2G",   1, "child_text2B",   1, "child_justify2", "RIGHT",
+      "text3", C:Orange(L["gp"] .. gp_indicator),     "child_text3R",   1, "child_text3G",   1, "child_text3B",   1, "child_justify3", "RIGHT",
+      "text4", C:Orange(L["pr"] .. pr_indicator),     "child_text4R",   1, "child_text4G",   1, "child_text4B",   0, "child_justify4", "RIGHT"
     )
   local t = self:BuildStandingsTable()
   local separator

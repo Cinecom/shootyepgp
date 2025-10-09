@@ -306,9 +306,23 @@ function sepgp:buildMenu()
       desc = L["Only show members in raid."],
       order = 80,
       get = function() return not not sepgp_raidonly end,
-      set = function(v) 
+      set = function(v)
         sepgp_raidonly = not sepgp_raidonly
         sepgp:SetRefresh(true)
+      end,
+    }
+    options.args["loot_sounds"] = {
+      type = "toggle",
+      name = "Loot sounds",
+      desc = "Enable or disable loot sounds.",
+      order = 82,
+      get = function() return sepgp_sound == 1 end,
+      set = function(v)
+        if sepgp_sound == 1 then
+          sepgp_sound = 0
+        else
+          sepgp_sound = 1
+        end
       end,
     }
     options.args["progress_tier_header"] = {

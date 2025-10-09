@@ -140,29 +140,7 @@ end
 
 
 
--- Turn loot sounds on/off
+-- Initialize loot sounds setting (default: enabled)
 if sepgp_sound == nil then
-    sepgp_sound = 1 
+    sepgp_sound = 1
 end
-
--- Slash command handler function
-local function HandleLootSoundCommand(msg)
-    local command
-    if msg then
-        command = string.lower(msg)
-    else
-        command = ""
-    end
-    
-    if command == "on" then
-        sepgp_sound = 1
-        DEFAULT_CHAT_FRAME:AddMessage("Loot sounds |cFF00FF00enabled|r")
-    elseif command == "off" then
-        sepgp_sound = 0
-        DEFAULT_CHAT_FRAME:AddMessage("Loot sounds |cFFFF0000disabled|r (" .. UnitName("player") .. ", you're boring)")
-    end
-end
-
--- Register the slash commands
-SLASH_LOOTSOUND1 = "/lootsound"
-SlashCmdList["LOOTSOUND"] = HandleLootSoundCommand
