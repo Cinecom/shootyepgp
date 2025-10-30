@@ -48,25 +48,40 @@ end
 -- Store the original function
 local originalChatFrame_OnEvent = ChatFrame_OnEvent
 
+-- Function to get color based on roll value
+local function GetRollColor(rollValue)
+    local rollNum = tonumber(rollValue)
+    if rollNum >= 90 then
+        return "|cFF00FF00" -- Green
+    elseif rollNum >= 70 then
+        return "|cFFFFFF00" -- Yellow
+    elseif rollNum >= 50 then
+        return "|cFFFF8800" -- Orange
+    else
+        return "|cFFFF0000" -- Red
+    end
+end
+
 -- Replace the event handler to filter out the original roll message
 ChatFrame_OnEvent = function(event)
     if event == "CHAT_MSG_SYSTEM" then
         local message = arg1
         if message then
             local _, _, name, roll, range = string.find(message, "^([^%s]+) rolls (%d+) %(1%-(%d+)%)$")
-            
+
             if name and roll then
                 local rank = GetGuildRankForPlayer(name)
-                
-                -- Create the modified message - always color the roll number green
+                local rollColor = GetRollColor(roll)
+
+                -- Create the modified message with color based on roll value
                 local modifiedMessage
-                
+
                 if rank and rank ~= "" then
                     -- Include rank for guild members
-                    modifiedMessage = name .. " <" .. rank .. "> rolls |cFF00FF00" .. roll .. "|r (1-" .. range .. ")"
+                    modifiedMessage = name .. " <" .. rank .. "> rolls " .. rollColor .. roll .. "|r (1-" .. range .. ")"
                 else
                     -- No rank, but still color the number
-                    modifiedMessage = name .. " rolls |cFF00FF00" .. roll .. "|r (1-" .. range .. ")"
+                    modifiedMessage = name .. " rolls " .. rollColor .. roll .. "|r (1-" .. range .. ")"
                 end
                 
                 -- Display the message with proper yellow system color
