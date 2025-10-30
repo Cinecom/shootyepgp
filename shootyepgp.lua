@@ -1875,7 +1875,7 @@ function sepgp:captureLootCall(text, sender)
     if (link_found) then
       local quality = hexColorQuality[itemColor] or -1
       if (quality >= 3) then
-        if (IsRaidLeader() or self:lootMaster()) and (sender == self._playerName) then
+        if (IsRaidLeader() or self:lootMaster()) then
           self:clearBids(true)
           sepgp.bid_item.link = itemString
           sepgp.bid_item.linkFull = itemLink
