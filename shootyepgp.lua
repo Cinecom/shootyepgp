@@ -2511,6 +2511,254 @@ StaticPopupDialogs["SHOOTY_EPGP_CONFIRM_RESET"] = {
   hideOnEscape = 1
 }
 
+-- Xmog Player Selection Frame
+function sepgp:ShowXmogPlayerSelection(data)
+  -- Create frame if it doesn't exist
+  if not sepgp_xmog_frame then
+    sepgp_xmog_frame = CreateFrame("Frame", "SepgpXmogFrame", UIParent)
+    sepgp_xmog_frame:SetWidth(280)
+    sepgp_xmog_frame:SetHeight(400)
+    sepgp_xmog_frame:SetPoint("CENTER", UIParent, "CENTER")
+    sepgp_xmog_frame:SetBackdrop({
+      bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+      edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+      tile = true, tileSize = 32, edgeSize = 32,
+      insets = { left = 11, right = 12, top = 12, bottom = 11 }
+    })
+    sepgp_xmog_frame:SetBackdropColor(0, 0, 0, 1)
+    sepgp_xmog_frame:EnableMouse(true)
+    sepgp_xmog_frame:SetMovable(true)
+    sepgp_xmog_frame:RegisterForDrag("LeftButton")
+    sepgp_xmog_frame:SetScript("OnDragStart", function() this:StartMoving() end)
+    sepgp_xmog_frame:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
+    sepgp_xmog_frame:SetFrameStrata("DIALOG")
+
+    -- Title
+    local title = sepgp_xmog_frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    title:SetPoint("TOP", 0, -15)
+    title:SetText("Who won the item?")
+    sepgp_xmog_frame.title = title
+
+    -- Close button
+    local closeBtn = CreateFrame("Button", nil, sepgp_xmog_frame, "UIPanelCloseButton")
+    closeBtn:SetPoint("TOPRIGHT", -5, -5)
+    closeBtn:SetScript("OnClick", function() sepgp_xmog_frame:Hide() end)
+
+    -- Scroll frame
+    local scrollFrame = CreateFrame("ScrollFrame", "SepgpXmogScrollFrame", sepgp_xmog_frame, "UIPanelScrollFrameTemplate")
+    scrollFrame:SetPoint("TOPLEFT", 20, -40)
+    scrollFrame:SetPoint("BOTTOMRIGHT", -30, 15)
+
+    -- Content frame
+    local contentFrame = CreateFrame("Frame", nil, scrollFrame)
+    contentFrame:SetWidth(230)
+    contentFrame:SetHeight(1)
+    scrollFrame:SetScrollChild(contentFrame)
+    sepgp_xmog_frame.contentFrame = contentFrame
+    sepgp_xmog_frame.scrollFrame = scrollFrame
+
+    -- Store player rows for reuse
+    sepgp_xmog_frame.playerRows = {}
+  end
+
+  -- Store the loot data for later use
+  sepgp_xmog_frame.lootData = data
+
+  -- Clear existing rows
+  for _, row in ipairs(sepgp_xmog_frame.playerRows) do
+    row:Hide()
+  end
+
+  -- Get raid members
+  local raidMembers = {}
+  if GetNumRaidMembers() > 0 then
+    for i = 1, GetNumRaidMembers(true) do
+      local name, rank, subgroup, level, class, fileName, zone, online, isDead = GetRaidRosterInfo(i)
+      if name and class then
+        table.insert(raidMembers, {name = name, class = class})
+      end
+    end
+  end
+
+  -- Define class order for sorting (Warrior, Paladin, Rogue, etc.)
+  local classOrder = {
+    ["Warrior"] = 1,
+    ["Paladin"] = 2,
+    ["Hunter"] = 3,
+    ["Rogue"] = 4,
+    ["Priest"] = 5,
+    ["Shaman"] = 6,
+    ["Mage"] = 7,
+    ["Warlock"] = 8,
+    ["Druid"] = 9
+  }
+
+  -- Sort by class order, then by name
+  table.sort(raidMembers, function(a, b)
+    local orderA = classOrder[a.class] or 99
+    local orderB = classOrder[b.class] or 99
+    if orderA == orderB then
+      return a.name < b.name
+    end
+    return orderA < orderB
+  end)
+
+  -- Create/update player rows
+  local yOffset = -2
+  for i, member in ipairs(raidMembers) do
+    local row = sepgp_xmog_frame.playerRows[i]
+
+    if not row then
+      row = CreateFrame("Frame", nil, sepgp_xmog_frame.contentFrame)
+      row:SetWidth(230)
+      row:SetHeight(20)
+
+      -- Player name
+      row.nameText = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+      row.nameText:SetPoint("LEFT", 5, 0)
+      row.nameText:SetWidth(95)
+      row.nameText:SetJustifyH("LEFT")
+
+      -- MS button
+      row.msBtn = CreateFrame("Button", nil, row)
+      row.msBtn:SetWidth(38)
+      row.msBtn:SetHeight(18)
+      row.msBtn:SetPoint("LEFT", row.nameText, "RIGHT", 3, 0)
+      row.msBtn:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 8, edgeSize = 12,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 }
+      })
+      row.msBtn:SetBackdropColor(0.4, 0.15, 0.15, 1)
+      row.msBtn:SetBackdropBorderColor(0.3, 0.1, 0.1, 1)
+      row.msBtn.text = row.msBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+      row.msBtn.text:SetPoint("CENTER", 0, 0)
+      row.msBtn.text:SetText("MS")
+      row.msBtn:SetScript("OnEnter", function()
+        this:SetBackdropColor(0.5, 0.2, 0.2, 1)
+      end)
+      row.msBtn:SetScript("OnLeave", function()
+        this:SetBackdropColor(0.4, 0.15, 0.15, 1)
+      end)
+      row.msBtn:SetScript("OnClick", function()
+        sepgp:AwardXmogGP(this:GetParent().playerName, "ms")
+      end)
+
+      -- OS button
+      row.osBtn = CreateFrame("Button", nil, row)
+      row.osBtn:SetWidth(38)
+      row.osBtn:SetHeight(18)
+      row.osBtn:SetPoint("LEFT", row.msBtn, "RIGHT", 1, 0)
+      row.osBtn:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 8, edgeSize = 12,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 }
+      })
+      row.osBtn:SetBackdropColor(0.45, 0.28, 0.15, 1)
+      row.osBtn:SetBackdropBorderColor(0.35, 0.22, 0.1, 1)
+      row.osBtn.text = row.osBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+      row.osBtn.text:SetPoint("CENTER", 0, 0)
+      row.osBtn.text:SetText("OS")
+      row.osBtn:SetScript("OnEnter", function()
+        this:SetBackdropColor(0.55, 0.35, 0.2, 1)
+      end)
+      row.osBtn:SetScript("OnLeave", function()
+        this:SetBackdropColor(0.45, 0.28, 0.15, 1)
+      end)
+      row.osBtn:SetScript("OnClick", function()
+        sepgp:AwardXmogGP(this:GetParent().playerName, "os")
+      end)
+
+      -- DE button
+      row.deBtn = CreateFrame("Button", nil, row)
+      row.deBtn:SetWidth(38)
+      row.deBtn:SetHeight(18)
+      row.deBtn:SetPoint("LEFT", row.osBtn, "RIGHT", 1, 0)
+      row.deBtn:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 8, edgeSize = 12,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 }
+      })
+      row.deBtn:SetBackdropColor(0.2, 0.2, 0.2, 1)
+      row.deBtn:SetBackdropBorderColor(0.4, 0.4, 0.4, 1)
+      row.deBtn.text = row.deBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+      row.deBtn.text:SetPoint("CENTER", 0, 0)
+      row.deBtn.text:SetText("DE")
+      row.deBtn:SetScript("OnEnter", function()
+        this:SetBackdropColor(0.4, 0.4, 0.4, 1)
+      end)
+      row.deBtn:SetScript("OnLeave", function()
+        this:SetBackdropColor(0.2, 0.2, 0.2, 1)
+      end)
+      row.deBtn:SetScript("OnClick", function()
+        sepgp:AwardXmogGP(this:GetParent().playerName, "de")
+      end)
+
+      sepgp_xmog_frame.playerRows[i] = row
+    end
+
+    row:SetPoint("TOPLEFT", 0, yOffset)
+    row.playerName = member.name
+
+    -- Set player name with class color
+    local coloredName = C:Colorize(BC:GetHexColor(member.class), member.name)
+    row.nameText:SetText(coloredName)
+
+    row:Show()
+    yOffset = yOffset - 20
+  end
+
+  -- Update content frame height
+  sepgp_xmog_frame.contentFrame:SetHeight(math.max(1, table.getn(raidMembers) * 20 + 5))
+
+  -- Show the frame
+  sepgp_xmog_frame:Show()
+end
+
+-- Award GP from Xmog selection
+function sepgp:AwardXmogGP(playerName, gpType)
+  if not sepgp_xmog_frame or not sepgp_xmog_frame.lootData then
+    return
+  end
+
+  local data = sepgp_xmog_frame.lootData
+  local price = data[sepgp.loot_index.price]
+  local off_price = data[sepgp.loot_index.off_price]
+  local itemLink = data[sepgp.loot_index.item]
+
+  local gp = 0
+  local actionText = ""
+
+  if gpType == "ms" then
+    gp = price
+    actionText = sepgp.VARS.msgp
+  elseif gpType == "os" then
+    gp = off_price
+    actionText = sepgp.VARS.osgp
+  elseif gpType == "de" then
+    gp = 0
+    actionText = sepgp.VARS.bankde
+  end
+
+  -- Award GP if applicable
+  if gp > 0 then
+    sepgp:givename_gp((playerName == YOU and sepgp._playerName or playerName), gp)
+    sepgp:refreshPRTablets()
+  end
+
+  -- Update loot record with xmog info
+  data[sepgp.loot_index.action] = string.format("Xmog (%s: %s)", playerName, actionText)
+  local update = data[sepgp.loot_index.update] ~= nil
+  sepgp:addOrUpdateLoot(data, update)
+  sepgp_loot:Refresh()
+
+  -- Hide the frame
+  sepgp_xmog_frame:Hide()
+end
+
 local sepgp_auto_gp_menu = {
   --{text = "Choose an Action", isTitle = true},
   {text = L["Add MainSpec GP"], func = function()
@@ -2550,6 +2798,14 @@ local sepgp_auto_gp_menu = {
       sepgp:addOrUpdateLoot(data,update)
       StaticPopup_Hide("SHOOTY_EPGP_AUTO_GEARPOINTS")
       sepgp_loot:Refresh()
+    end
+  end},
+  {text = L["Xmog"], func = function()
+    local dialog = StaticPopup_FindVisible("SHOOTY_EPGP_AUTO_GEARPOINTS")
+    if (dialog) then
+      local data = dialog.data
+      sepgp:ShowXmogPlayerSelection(data)
+      StaticPopup_Hide("SHOOTY_EPGP_AUTO_GEARPOINTS")
     end
   end}
 }
