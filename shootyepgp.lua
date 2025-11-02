@@ -884,23 +884,25 @@ end
 function sepgp:LootFrameItem_OnClick(button,data)
   if not IsAltKeyDown() then return end
   if not UnitInRaid("player") then return end
-  if not (self:lootMaster()) then 
-    self:defaultPrint(L["Need MasterLooter to perform Bid Calls!"])
-    UIErrorsFrame:AddMessage(L["Need MasterLooter to perform Bid Calls!"],1,0,0)
-    return 
-  end
+
   local slot, quality
   if data ~= nil then
     slot,quality = data:GetID(), data.quality
   else
     slot = LootFrame.selectedSlot or 0
     quality = LootFrame.selectedQuality or -1
-    if not (this._hasExtraClicks) then 
+    if not (this._hasExtraClicks) then
       this:RegisterForClicks("LeftButtonUp","RightButtonUp","MiddleButtonUp")
       this._hasExtraClicks = true
     end
   end
-  if LootSlotIsItem(slot) and quality >= 3 then 
+
+  if LootSlotIsItem(slot) and quality >= 3 then
+    if not (self:lootMaster()) then
+      self:defaultPrint(L["Need MasterLooter to perform Bid Calls!"])
+      UIErrorsFrame:AddMessage(L["Need MasterLooter to perform Bid Calls!"],1,0,0)
+      return
+    end
     local itemLink = GetLootSlotLink(slot)
     if (itemLink) then
       if button == "LeftButton" then
@@ -915,16 +917,11 @@ function sepgp:LootFrameItem_OnClick(button,data)
 end
 
 function sepgp:ContainerFrameItemButton_OnClick(button,ignoreModifiers)
-  if not IsAltKeyDown() then 
-    return self.hooks["ContainerFrameItemButton_OnClick"](button,ignoreModifiers) 
+  if not IsAltKeyDown() then
+    return self.hooks["ContainerFrameItemButton_OnClick"](button,ignoreModifiers)
   end
-  if not UnitInRaid("player") then 
-    return self.hooks["ContainerFrameItemButton_OnClick"](button,ignoreModifiers) 
-  end
-  if not (self:lootMaster()) then
-    self:defaultPrint(L["Need MasterLooter to perform Bid Calls!"])
-    UIErrorsFrame:AddMessage(L["Need MasterLooter to perform Bid Calls!"],1,0,0)
-    return self.hooks["ContainerFrameItemButton_OnClick"](button,ignoreModifiers) 
+  if not UnitInRaid("player") then
+    return self.hooks["ContainerFrameItemButton_OnClick"](button,ignoreModifiers)
   end
   if not (this._hasExtraClicks) then
     this:RegisterForClicks("LeftButtonUp","RightButtonUp","MiddleButtonUp")
@@ -937,6 +934,11 @@ function sepgp:ContainerFrameItemButton_OnClick(button,ignoreModifiers)
     if (link_found) then
       local bind = self:itemBinding(itemString) or ""
       if (bind == self.VARS.boe) then
+        if not (self:lootMaster()) then
+          self:defaultPrint(L["Need MasterLooter to perform Bid Calls!"])
+          UIErrorsFrame:AddMessage(L["Need MasterLooter to perform Bid Calls!"],1,0,0)
+          return self.hooks["ContainerFrameItemButton_OnClick"](button,ignoreModifiers)
+        end
         if button == "LeftButton" then
           self:widestAudience(string.format(L["Whisper %s a '+' for MS / '-' for OS / 'OSPRIO' for full price OS with prio for the item: %s"],sepgp._playerName,itemLink))
           return
@@ -946,11 +948,11 @@ function sepgp:ContainerFrameItemButton_OnClick(button,ignoreModifiers)
         elseif button == "MiddleButton" then
           self:widestAudience(string.format(L["Whisper %s a + or - for %s (mainspec or offspec)"],sepgp._playerName,itemLink))
           return
-        end    
-      end      
+        end
+      end
     end
   end
-  return self.hooks["ContainerFrameItemButton_OnClick"](button,ignoreModifiers) 
+  return self.hooks["ContainerFrameItemButton_OnClick"](button,ignoreModifiers)
 end
 
 function sepgp:pfUI_UpdateLootFrame()
