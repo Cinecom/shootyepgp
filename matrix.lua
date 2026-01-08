@@ -17,14 +17,14 @@ local playerFrames = {} -- UI frames for each player
 local isUpdating = false
 
 -- Constants
-local FRAME_WIDTH = 520
-local FRAME_HEIGHT = 400
-local PLAYER_WIDTH = 120
+local FRAME_WIDTH = 670
+local FRAME_HEIGHT = 410
+local PLAYER_WIDTH = 105
 local PLAYER_HEIGHT = 16
 local CHECKBOX_SIZE = 12
 local GROUP_HEADER_HEIGHT = 18
-local COLUMNS = 2
-local GROUPS_PER_COLUMN = 4
+local COLUMNS = 4
+local GROUPS_PER_COLUMN = 2
 
 -- Colors
 local COLOR_RED = {r = 0.9, g = 0.2, b = 0.2}
@@ -356,7 +356,7 @@ local function createPlayerFrame(parent, playerData, x, y)
     -- Player name
     frame.nameText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     frame.nameText:SetPoint("LEFT", frame.blueCB, "RIGHT", 4, 0)
-    frame.nameText:SetWidth(PLAYER_WIDTH - 35)
+    frame.nameText:SetWidth(PLAYER_WIDTH - 30)
     frame.nameText:SetJustifyH("LEFT")
     frame.nameText:SetText("")
 
@@ -457,19 +457,19 @@ local function createMatrixFrame()
     frame.pillSection.title:SetTextColor(0.8, 0.8, 0.8)
 
     -- Pill indicators
-    frame.redPillRemaining = createPillIndicator(frame.pillSection, COLOR_RED, 100, -20, "MatrixRedPillRemaining")
+    frame.redPillRemaining = createPillIndicator(frame.pillSection, COLOR_RED, 175, -20, "MatrixRedPillRemaining")
     frame.redPillRemaining.label = frame.redPillRemaining:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     frame.redPillRemaining.label:SetPoint("LEFT", frame.redPillRemaining.count, "RIGHT", 4, 0)
     frame.redPillRemaining.label:SetText("Red (Left)")
     frame.redPillRemaining.label:SetTextColor(COLOR_RED.r, COLOR_RED.g, COLOR_RED.b)
 
-    frame.bluePillRemaining = createPillIndicator(frame.pillSection, COLOR_BLUE, 220, -20, "MatrixBluePillRemaining")
+    frame.bluePillRemaining = createPillIndicator(frame.pillSection, COLOR_BLUE, 295, -20, "MatrixBluePillRemaining")
     frame.bluePillRemaining.label = frame.bluePillRemaining:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     frame.bluePillRemaining.label:SetPoint("LEFT", frame.bluePillRemaining.count, "RIGHT", 4, 0)
     frame.bluePillRemaining.label:SetText("Blue (Right)")
     frame.bluePillRemaining.label:SetTextColor(COLOR_BLUE.r, COLOR_BLUE.g, COLOR_BLUE.b)
 
-    frame.awkwardRemaining = createPillIndicator(frame.pillSection, COLOR_AWKWARD, 350, -20, "MatrixAwkwardRemaining")
+    frame.awkwardRemaining = createPillIndicator(frame.pillSection, COLOR_AWKWARD, 425, -20, "MatrixAwkwardRemaining")
     frame.awkwardRemaining.label = frame.awkwardRemaining:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     frame.awkwardRemaining.label:SetPoint("LEFT", frame.awkwardRemaining.count, "RIGHT", 4, 0)
     frame.awkwardRemaining.label:SetText("Awkward")
@@ -501,13 +501,13 @@ local function createMatrixFrame()
     frame.assignedSection.title:SetText("Pills Taken")
     frame.assignedSection.title:SetTextColor(0.8, 0.8, 0.8)
 
-    frame.redPillAssigned = createPillIndicator(frame.assignedSection, COLOR_RED, 150, -18, "MatrixRedPillAssigned")
+    frame.redPillAssigned = createPillIndicator(frame.assignedSection, COLOR_RED, 220, -18, "MatrixRedPillAssigned")
     frame.redPillAssigned.label = frame.redPillAssigned:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     frame.redPillAssigned.label:SetPoint("LEFT", frame.redPillAssigned.count, "RIGHT", 4, 0)
     frame.redPillAssigned.label:SetText("Red")
     frame.redPillAssigned.label:SetTextColor(COLOR_RED.r, COLOR_RED.g, COLOR_RED.b)
 
-    frame.bluePillAssigned = createPillIndicator(frame.assignedSection, COLOR_BLUE, 280, -18, "MatrixBluePillAssigned")
+    frame.bluePillAssigned = createPillIndicator(frame.assignedSection, COLOR_BLUE, 360, -18, "MatrixBluePillAssigned")
     frame.bluePillAssigned.label = frame.bluePillAssigned:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     frame.bluePillAssigned.label:SetPoint("LEFT", frame.bluePillAssigned.count, "RIGHT", 4, 0)
     frame.bluePillAssigned.label:SetText("Blue")
@@ -584,19 +584,19 @@ local function refreshPlayerList()
         end
     end
 
-    -- Layout: 2 columns, groups 1-4 in left, groups 5-8 in right
-    local COLUMN_WIDTH = 255
+    -- Layout: 4 columns, 2 groups per column
+    local COLUMN_WIDTH = 175
     local START_Y = -8
     local GROUP_SPACING = 4
 
     local playerIndex = 0
 
-    for col = 1, 2 do
+    for col = 1, 4 do
         local x = (col - 1) * COLUMN_WIDTH + 8
         local y = START_Y
 
-        local startGroup = (col - 1) * 4 + 1
-        local endGroup = col * 4
+        local startGroup = (col - 1) * 2 + 1
+        local endGroup = col * 2
 
         for groupNum = startGroup, endGroup do
             local groupPlayers = groups[groupNum]
