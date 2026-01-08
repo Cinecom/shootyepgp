@@ -689,16 +689,31 @@ function sepgp_matrix:AnnounceTeams()
         channel = "RAID_WARNING"
     end
 
+    -- Helper function to send names in chunks of 9
+    local NAMES_PER_MESSAGE = 9
+    local function sendTeamMessages(names, teamLabel, teamColor)
+        local totalNames = table.getn(names)
+        if totalNames == 0 then return end
+
+        local chunk = {}
+        for i, name in ipairs(names) do
+            table.insert(chunk, name)
+            if table.getn(chunk) == NAMES_PER_MESSAGE or i == totalNames then
+                local msg = teamColor .. teamLabel .. "|r: " .. table.concat(chunk, ", ")
+                SendChatMessage(msg, channel)
+                chunk = {}
+            end
+        end
+    end
+
     -- Red team announcement
-    local redMsg = "|cffff3333RED TEAM (Left)|r: " .. table.concat(redNames, ", ")
-    SendChatMessage(redMsg, channel)
+    sendTeamMessages(redNames, "RED TEAM (Left)", "|cffff3333")
 
     -- Empty line separator (send a simple divider)
     SendChatMessage("---", channel)
 
     -- Blue team announcement
-    local blueMsg = "|cff3366ffBLUE TEAM (Right)|r: " .. table.concat(blueNames, ", ")
-    SendChatMessage(blueMsg, channel)
+    sendTeamMessages(blueNames, "BLUE TEAM (Right)", "|cff3366ff")
 
     -- Also print locally
     sepgp:defaultPrint("Matrix teams have been announced!")
