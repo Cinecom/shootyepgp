@@ -129,6 +129,14 @@ function sepgp_bids:bidCountdown()
   self:ScheduleEvent("shootyepgpBidCountdownFinish",self.countdownFinish,6,self)
 end
 
+-- Send attention signal to officers (ML only)
+function sepgp_bids:sendAttention()
+  if IsRaidLeader() or sepgp:lootMaster() then
+    sepgp:broadcastBidAttention()
+    sepgp:defaultPrint(L["Attention signal sent to officers."])
+  end
+end
+
 local pr_sorter_bids = function(a,b)
   if sepgp_minep > 0 then
     local a_over = a[3]-sepgp_minep >= 0
@@ -183,17 +191,32 @@ function sepgp_bids:OnTooltipUpdate()
       "text2", price,
       "text3", offspec
     )
-  local countdownHeader = T:AddCategory(
-      "columns", 2,
-      "text","","child_textR",  1, "child_textG",  1, "child_textB",  1,"child_justify", "LEFT",
-      "text2","","child_text2R",  1, "child_text2G",  1, "child_text2B",  1,"child_justify2", "CENTER",
-      "hideBlankLine", true
-    )
-  countdownHeader:AddLine(
-      "text", C:Green("Countdown"), 
-      "text2", self._counterText, 
-      "func", "bidCountdown", "arg1", self
-    )  
+  -- Countdown button (only for Master Looter)
+  if IsRaidLeader() or sepgp:lootMaster() then
+    local countdownHeader = T:AddCategory(
+        "columns", 2,
+        "text","","child_textR",  1, "child_textG",  1, "child_textB",  1,"child_justify", "LEFT",
+        "text2","","child_text2R",  1, "child_text2G",  1, "child_text2B",  1,"child_justify2", "CENTER",
+        "hideBlankLine", true
+      )
+    countdownHeader:AddLine(
+        "text", C:Green("Countdown"),
+        "text2", self._counterText,
+        "func", "bidCountdown", "arg1", self
+      )
+  end
+  -- Attention button (only for Master Looter)
+  if IsRaidLeader() or sepgp:lootMaster() then
+    local attentionCat = T:AddCategory(
+        "columns", 1,
+        "text", "",
+        "hideBlankLine", true
+      )
+    attentionCat:AddLine(
+        "text", C:Yellow("[" .. L["Attention"] .. "]"),
+        "func", "sendAttention", "arg1", self
+      )
+  end
   local maincatHeader = T:AddCategory(
       "columns", 1,
       "text", C:Gold("MainSpec Bids")

@@ -40,6 +40,9 @@ local running_check,running_bid
 local partyUnit,raidUnit = {},{}
 local hexColorQuality = {}
 local reserves_blacklist,bids_blacklist = {},{}
+local bid_broadcast_queue = {}
+local bid_broadcast_running = false
+local BROADCAST_INTERVAL = 1.5
 local bidlink = {
   ["ms"]=L["|cff0066ff|Hshootybid:1:$ML|h[MAINSPEC]|h|r"],
   ["os"]=L["|cff3ade2f|Hshootybid:2:$ML|h[OFFSPEC]|h|r"],
@@ -1191,6 +1194,87 @@ function sepgp:addonComms(prefix,message,channel,sender)
           self._options.args["set_min_ep_header"].name = string.format(L["Minimum EP: %s"],sepgp_minep)
         end
       end
+    -- Handle bid start broadcast from master looter
+    elseif who == "BIDSTART" then
+      -- Only officers/supreme leaders who are NOT the ML/RL should process this
+      if not (IsRaidLeader() or self:lootMaster()) and self:canReceiveBidBroadcast() then
+        -- Parse: BIDSTART;itemID;1
+        local itemID = what
+        if not itemID or itemID == "" then return end
+        -- Use GetItemInfo to get item details locally
+        local itemName, itemLink, itemQuality = GetItemInfo(tonumber(itemID))
+        if not itemName then
+          -- Item not in cache, try to query it
+          self:debugPrint("Item not in cache, waiting for server...")
+          return
+        end
+        -- Build itemString format expected by GetPrice
+        local itemString = string.format("item:%s:0:0:0", itemID)
+        -- Get quality color
+        local _, _, _, itemColor = GetItemQualityColor(itemQuality or 1)
+        local coloredName = string.format("%s%s|r", itemColor or "|cffffffff", itemName)
+        -- Set up bid tracking for this officer
+        self:clearBids()
+        sepgp.bid_item.link = itemString
+        sepgp.bid_item.linkFull = itemLink
+        sepgp.bid_item.name = coloredName
+        running_bid = true
+        self:ScheduleEvent("shootyepgpBidTimeout", self.clearBids, 300, self)
+        -- DO NOT auto-open bid window for officers, they must open manually
+        sepgp_bids:Refresh()
+      end
+    -- Handle bid data broadcast from master looter
+    elseif who == "BIDS" then
+      -- Only officers/supreme leaders who are NOT the ML/RL should process this
+      if not (IsRaidLeader() or self:lootMaster()) and self:canReceiveBidBroadcast() then
+        if not running_bid then return end
+        -- Parse comma-separated bid entries
+        for bidData in string.gfind(what, "([^,]+)") do
+          local bidType, name, class, ep, gp, pr, main_name, prio_flag = self:deserializeBid(bidData)
+          if bidType and name and name ~= "" then
+            -- Check if this bid already exists (by name)
+            local exists = false
+            if bidType == "MS" then
+              for i = 1, table.getn(sepgp.bids_main) do
+                if sepgp.bids_main[i][1] == name then
+                  exists = true
+                  break
+                end
+              end
+              if not exists then
+                table.insert(sepgp.bids_main, {name, class, ep, gp, pr, main_name or "", prio_flag or ""})
+              end
+            elseif bidType == "OS" or bidType == "OSPRIO" then
+              for i = 1, table.getn(sepgp.bids_off) do
+                if sepgp.bids_off[i][1] == name then
+                  exists = true
+                  break
+                end
+              end
+              if not exists then
+                local flag = ""
+                if bidType == "OSPRIO" then flag = "OSPRIO" end
+                table.insert(sepgp.bids_off, {name, class, ep, gp, pr, main_name or "", flag})
+              end
+            end
+          end
+        end
+        -- Refresh display if window is open
+        sepgp_bids:Refresh()
+      end
+    -- Handle bid clear broadcast from master looter
+    elseif who == "BIDCLEAR" then
+      -- Only officers/supreme leaders who are NOT the ML/RL should process this
+      if not (IsRaidLeader() or self:lootMaster()) and self:canReceiveBidBroadcast() then
+        self:clearBids()
+      end
+    -- Handle attention signal from master looter
+    elseif who == "BIDATTENTION" then
+      -- Only officers/supreme leaders who are NOT the ML/RL should process this
+      if not (IsRaidLeader() or self:lootMaster()) and self:canReceiveBidBroadcast() then
+        self:playAttentionSound()
+        self:defaultPrint(C:Yellow(L["Attention! Master Looter wants you to check the bid window."]))
+      end
     end
     if msg and msg~="" then
       self:defaultPrint(msg)
@@ -1886,6 +1970,8 @@ function sepgp:captureLootCall(text, sender)
           running_bid = true
           self:debugPrint("Capturing Bids for 5min.")
           sepgp_bids:Toggle(true)
+          -- Broadcast bid start to officers
+          self:broadcastBidStart(itemString, itemLink, sepgp.bid_item.name)
         end
         self:bidPrint(itemLink,sender,mskw_found,oskw_found,whisperkw_found)
       end
@@ -1953,30 +2039,37 @@ function sepgp:captureBid(text, sender)
           -- Mark them so we don't double-add
           bids_blacklist[sender] = true
 
+          local pr = ep / gp
           if mskw_found then
             -- It's a + (Mainspec)
             if main_name then
-              table.insert(sepgp.bids_main, {name, class, ep, gp, ep / gp, main_name, ""})
+              table.insert(sepgp.bids_main, {name, class, ep, gp, pr, main_name, ""})
             else
-              table.insert(sepgp.bids_main, {name, class, ep, gp, ep / gp, "", ""})
+              table.insert(sepgp.bids_main, {name, class, ep, gp, pr, "", ""})
             end
+            -- Queue broadcast to officers
+            self:queueBidBroadcast("MS", name, class, ep, gp, pr, main_name or "", "")
 
           elseif oskw_found then
             -- It's a - (Offspec)
             if main_name then
-              table.insert(sepgp.bids_off, {name, class, ep, gp, ep / gp, main_name, ""})
+              table.insert(sepgp.bids_off, {name, class, ep, gp, pr, main_name, ""})
             else
-              table.insert(sepgp.bids_off, {name, class, ep, gp, ep / gp, "", ""})
+              table.insert(sepgp.bids_off, {name, class, ep, gp, pr, "", ""})
             end
+            -- Queue broadcast to officers
+            self:queueBidBroadcast("OS", name, class, ep, gp, pr, main_name or "", "")
 
           elseif msoskw_found then
             -- It's OSPRIO -> Also place in the Offspec table,
             -- but with "OSPRIO" flag so we can detect it in the GUI
             if main_name then
-              table.insert(sepgp.bids_off, {name, class, ep, gp, ep / gp, main_name, prio_flag})
+              table.insert(sepgp.bids_off, {name, class, ep, gp, pr, main_name, prio_flag})
             else
-              table.insert(sepgp.bids_off, {name, class, ep, gp, ep / gp, "", prio_flag})
+              table.insert(sepgp.bids_off, {name, class, ep, gp, pr, "", prio_flag})
             end
+            -- Queue broadcast to officers
+            self:queueBidBroadcast("OSPRIO", name, class, ep, gp, pr, main_name or "", prio_flag)
           end
 
           -- Refresh the bids window
@@ -1992,13 +2085,22 @@ function sepgp:clearBids(reset)
   if reset~=nil then
     self:debugPrint(L["Clearing old Bids"])
   end
+  -- Broadcast clear to officers if we are the ML/RL
+  if (IsRaidLeader() or self:lootMaster()) and running_bid then
+    self:broadcastBidClear()
+  end
   sepgp.bid_item = {}
   sepgp.bids_main = {}
   sepgp.bids_off = {}
   bids_blacklist = {}
+  bid_broadcast_queue = {}
   if self:IsEventScheduled("shootyepgpBidTimeout") then
     self:CancelScheduledEvent("shootyepgpBidTimeout")
   end
+  if self:IsEventScheduled("shootyepgpBidBroadcast") then
+    self:CancelScheduledEvent("shootyepgpBidBroadcast")
+  end
+  bid_broadcast_running = false
   running_bid = false
   sepgp_bids._counterText = ""
   sepgp_bids:Refresh()
@@ -2259,6 +2361,118 @@ function sepgp:lootMaster()
   else
     return false
   end
+end
+
+-- Check if player can receive bid broadcasts (Officer or Supreme leader rank)
+function sepgp:canReceiveBidBroadcast()
+  if not IsInGuild() then return false end
+  local playerName = self._playerName
+  for i = 1, GetNumGuildMembers(true) do
+    local name, rankName = GetGuildRosterInfo(i)
+    if name == playerName then
+      if rankName == "Officer" or rankName == "Supreme leader" then
+        return true
+      end
+      return false
+    end
+  end
+  return false
+end
+
+-- Serialize a single bid entry for broadcast
+-- Format: type~name~class~ep~gp~pr~main_name~prio_flag
+function sepgp:serializeBid(bidType, name, class, ep, gp, pr, main_name, prio_flag)
+  return string.format("%s~%s~%s~%s~%s~%s~%s~%s",
+    bidType or "",
+    name or "",
+    class or "",
+    tostring(ep or 0),
+    tostring(gp or 0),
+    tostring(pr or 0),
+    main_name or "",
+    prio_flag or "")
+end
+
+-- Deserialize a bid entry from broadcast
+function sepgp:deserializeBid(data)
+  local parts = {}
+  local start = 1
+  while true do
+    local pos = string.find(data, "~", start, true)
+    if pos then
+      table.insert(parts, string.sub(data, start, pos - 1))
+      start = pos + 1
+    else
+      table.insert(parts, string.sub(data, start))
+      break
+    end
+  end
+  return parts[1], parts[2], parts[3], tonumber(parts[4]) or 0, tonumber(parts[5]) or 0, tonumber(parts[6]) or 0, parts[7], parts[8]
+end
+
+-- Queue a bid for broadcast
+function sepgp:queueBidBroadcast(bidType, name, class, ep, gp, pr, main_name, prio_flag)
+  local serialized = self:serializeBid(bidType, name, class, ep, gp, pr, main_name, prio_flag)
+  table.insert(bid_broadcast_queue, serialized)
+  -- Start broadcast timer if not already running
+  if not bid_broadcast_running then
+    bid_broadcast_running = true
+    self:ScheduleRepeatingEvent("shootyepgpBidBroadcast", self.sendBidBroadcast, BROADCAST_INTERVAL, self)
+  end
+end
+
+-- Send queued bids via addon message
+function sepgp:sendBidBroadcast()
+  if table.getn(bid_broadcast_queue) == 0 then
+    -- No more bids to send, stop the timer
+    if self:IsEventScheduled("shootyepgpBidBroadcast") then
+      self:CancelScheduledEvent("shootyepgpBidBroadcast")
+    end
+    bid_broadcast_running = false
+    return
+  end
+
+  -- Send all queued bids in one message (comma-separated)
+  local bidsData = table.concat(bid_broadcast_queue, ",")
+  local addonMsg = string.format("BIDS;%s;1", bidsData)
+
+  -- Broadcast to raid if in raid, otherwise do nothing
+  if GetNumRaidMembers() > 0 then
+    self:addonMessage(addonMsg, "RAID")
+  end
+
+  -- Clear the queue
+  bid_broadcast_queue = {}
+end
+
+-- Broadcast bid start (item info) to officers
+function sepgp:broadcastBidStart(itemString, itemLink, itemName)
+  if GetNumRaidMembers() == 0 then return end
+  -- Extract just the item ID from itemString (e.g., "item:12345:0:0:0" -> "12345")
+  local _, _, itemID = string.find(itemString, "item:(%d+)")
+  if not itemID then return end
+  -- Send only the item ID - receiver will use GetItemInfo to get the rest
+  local addonMsg = string.format("BIDSTART;%s;1", itemID)
+  self:addonMessage(addonMsg, "RAID")
+end
+
+-- Broadcast bid clear to officers
+function sepgp:broadcastBidClear()
+  if GetNumRaidMembers() == 0 then return end
+  local addonMsg = "BIDCLEAR;1;1"
+  self:addonMessage(addonMsg, "RAID")
+end
+
+-- Broadcast attention signal to officers (plays sound)
+function sepgp:broadcastBidAttention()
+  if GetNumRaidMembers() == 0 then return end
+  local addonMsg = "BIDATTENTION;1;1"
+  self:addonMessage(addonMsg, "RAID")
+end
+
+-- Play attention notification sound
+function sepgp:playAttentionSound()
+  PlaySoundFile("Interface\\AddOns\\shootyepgp\\Sounds\\notification.wav")
 end
 
 function sepgp:testMain()

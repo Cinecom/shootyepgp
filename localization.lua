@@ -219,6 +219,10 @@ Results will print here when done.]],
   ["Your main has been set to %s"] = true,
   ["Alts"] = true,
   ["New Minimum EP"] = true,
+  -- bid broadcasting
+  ["Attention"] = true,
+  ["Attention signal sent to officers."] = true,
+  ["Attention! Master Looter wants you to check the bid window."] = true,
 } end)
 
 L:RegisterTranslations("zhCN", function() return {
@@ -437,4 +441,8 @@ L:RegisterTranslations("zhCN", function() return {
   ["Minimum EP"] = "最小值 EP",
   ["Set Minimum EP"] = "设置最小值 EP",
   ["New Minimum EP"] = "新最小值 EP",
+  -- bid broadcasting
+  ["Attention"] = "注意",
+  ["Attention signal sent to officers."] = "注意信号已发送给官员.",
+  ["Attention! Master Looter wants you to check the bid window."] = "注意! 分配者希望你查看竞标窗口.",
 } end)
