@@ -1196,8 +1196,8 @@ function sepgp:addonComms(prefix,message,channel,sender)
       end
     -- Handle bid start broadcast from master looter
     elseif who == "BIDSTART" then
-      -- Only officers/supreme leaders who are NOT the ML/RL should process this
-      if not (IsRaidLeader() or self:lootMaster()) and self:canReceiveBidBroadcast() then
+      -- Only officers/supreme leaders who are NOT the ML should process this
+      if not self:lootMaster() and self:canReceiveBidBroadcast() then
         -- Parse: BIDSTART;itemID;1
         local itemID = what
         if not itemID or itemID == "" then return end
@@ -1225,8 +1225,8 @@ function sepgp:addonComms(prefix,message,channel,sender)
       end
     -- Handle bid data broadcast from master looter
     elseif who == "BIDS" then
-      -- Only officers/supreme leaders who are NOT the ML/RL should process this
-      if not (IsRaidLeader() or self:lootMaster()) and self:canReceiveBidBroadcast() then
+      -- Only officers/supreme leaders who are NOT the ML should process this
+      if not self:lootMaster() and self:canReceiveBidBroadcast() then
         if not running_bid then return end
         -- Parse comma-separated bid entries
         for bidData in string.gfind(what, "([^,]+)") do
@@ -1264,14 +1264,14 @@ function sepgp:addonComms(prefix,message,channel,sender)
       end
     -- Handle bid clear broadcast from master looter
     elseif who == "BIDCLEAR" then
-      -- Only officers/supreme leaders who are NOT the ML/RL should process this
-      if not (IsRaidLeader() or self:lootMaster()) and self:canReceiveBidBroadcast() then
+      -- Only officers/supreme leaders who are NOT the ML should process this
+      if not self:lootMaster() and self:canReceiveBidBroadcast() then
         self:clearBids()
       end
     -- Handle attention signal from master looter
     elseif who == "BIDATTENTION" then
-      -- Only officers/supreme leaders who are NOT the ML/RL should process this
-      if not (IsRaidLeader() or self:lootMaster()) and self:canReceiveBidBroadcast() then
+      -- Only officers/supreme leaders who are NOT the ML should process this
+      if not self:lootMaster() and self:canReceiveBidBroadcast() then
         self:playAttentionSound()
         self:defaultPrint(C:Yellow(L["Attention! Master Looter wants you to check the bid window."]))
       end
