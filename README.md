@@ -8,6 +8,7 @@
 - Sound plays when loot is announced (Turn off/on from the options menu)
 - Added a striking system for naughty players type ``/strike`` to open te panel
 - Added a simple UI to place players on the correct side during Gnarlmoon. Type ``/matrix`` to open
+- Added an AFK check for the bench group Type ``/bench`` to open
 
 
 # shootyepgp
