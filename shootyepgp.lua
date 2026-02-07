@@ -220,7 +220,7 @@ function sepgp:buildMenu()
       hidden = function() return not (admin()) end,
       validate = function(v)
         local n = tonumber(v)
-        return n and n >= 0 and n < sepgp.VARS.max
+        return n and n > -sepgp.VARS.max and n < sepgp.VARS.max
       end
     }
     options.args["gp"] = {
@@ -1093,14 +1093,18 @@ end
 function sepgp:addonComms(prefix,message,channel,sender)
   if not prefix == self.VARS.prefix then return end -- we don't care for messages from other addons
   if sender == self._playerName then return end -- we don't care for messages from ourselves
-  local name_g,class,rank = self:verifyGuildMember(sender,true)
+  local name_g,class,rank = self:verifyGuildMember(sender,true,true)
   if not (name_g) then return end -- only accept messages from guild members
-  local who,what,amount
-  for name,epgp,change in string.gfind(message,"([^;]+);([^;]+);([^;]+)") do
-    who=name
-    what=epgp
-    amount=tonumber(change)
+  local who,what,amount,new_ep,new_gp
+  local fields = {}
+  for field in string.gfind(message, "([^;]+)") do
+    table.insert(fields, field)
   end
+  who = fields[1]
+  what = fields[2]
+  amount = tonumber(fields[3])
+  new_ep = tonumber(fields[4])
+  new_gp = tonumber(fields[5])
   if (who) and (what) and (amount) then
     local msg
     local for_main = (sepgp_main and (who == sepgp_main))
@@ -1278,7 +1282,17 @@ function sepgp:addonComms(prefix,message,channel,sender)
     end
     if msg and msg~="" then
       self:defaultPrint(msg)
-      self:my_epgp(for_main)
+      self:addToLog(msg)
+      if new_ep and new_gp then
+        local pr = new_ep / new_gp
+        self:defaultPrint(string.format(L["You now have: %d EP %d GP |cffffff00%.03f|r|cffff7f00PR|r."], new_ep, new_gp, pr))
+        local pr_decay = self:capcalc(new_ep, new_gp)
+        if pr_decay < 0 then
+          self:defaultPrint(string.format(L["Close to EPGP Cap. Next Decay will change your |cffff7f00PR|r by |cffff0000%.4g|r."], pr_decay))
+        end
+      else
+        self:my_epgp(for_main)
+      end
     end
   end
 end
@@ -1492,9 +1506,10 @@ function sepgp:givename_ep(getname,ep) -- awards ep to a single character
     local msg = string.format(L["%s EP Penalty to %s%s."],ep,getname,postfix)
     self:adminSay(msg)
     self:addToLog(msg)
-    local addonMsg = string.format("%s;%s;%s",getname,"EP",ep)
+    local currentgp = self:get_gp_v3(getname) or sepgp.VARS.basegp
+    local addonMsg = string.format("%s;%s;%s;%s;%s",getname,"EP",ep,math.max(0,newep),currentgp)
     self:addonMessage(addonMsg,"GUILD")
-  end  
+  end
 end
 
 function sepgp:givename_gp(getname,gp) -- assigns gp to a single character
@@ -1515,8 +1530,9 @@ function sepgp:givename_gp(getname,gp) -- assigns gp to a single character
   local msg = string.format(L["Awarding %d GP to %s%s. (Previous: %d, New: %d)"],gp,getname,postfix,oldgp,math.max(sepgp.VARS.basegp,newgp))
   self:adminSay(msg)
   self:addToLog(msg)
-  local addonMsg = string.format("%s;%s;%s",getname,"GP",gp)
-  self:addonMessage(addonMsg,"GUILD")  
+  local currentep = self:get_ep_v3(getname) or 0
+  local addonMsg = string.format("%s;%s;%s;%s;%s",getname,"GP",gp,currentep,math.max(sepgp.VARS.basegp,newgp))
+  self:addonMessage(addonMsg,"GUILD")
 end
 
 function sepgp:decay_epgp_v2() -- decays entire roster's ep and gp
@@ -1650,14 +1666,14 @@ function sepgp:OnTooltipUpdate()
   if (admin()) then
     hint = string.format(hint,L[" \n|cffffff00Ctrl+Click|r to toggle Reserves. \n|cffffff00Alt+Click|r to toggle Bids. \n|cffffff00Shift+Click|r to toggle Loot. \n|cffffff00Ctrl+Alt+Click|r to toggle Alts. \n|cffffff00Ctrl+Shift+Click|r to toggle Logs."])
   else
-    hint = string.format(hint,"")
+    hint = string.format(hint," \n|cffffff00Ctrl+Shift+Click|r to toggle Logs.")
   end
   T:SetHint(hint)
 end
 
 function sepgp:OnClick()
   local is_admin = admin()
-  if (IsControlKeyDown() and IsShiftKeyDown() and is_admin) then
+  if (IsControlKeyDown() and IsShiftKeyDown()) then
     sepgp_logs:Toggle()
   elseif (IsControlKeyDown() and IsAltKeyDown() and is_admin) then
     sepgp_alts:Toggle()
@@ -2331,11 +2347,10 @@ function sepgp:processLoot(player,itemLink,source)
   end
 end
 
-function sepgp:verifyGuildMember(name,silent)
+function sepgp:verifyGuildMember(name,silent,skipLevel)
   for i=1,GetNumGuildMembers(1) do
     local g_name, g_rank, g_rankIndex, g_level, g_class, g_zone, g_note, g_officernote, g_online = GetGuildRosterInfo(i)
-    if (string.lower(name) == string.lower(g_name)) and (tonumber(g_level) >= sepgp.VARS.minlevel) then 
-    -- == MAX_PLAYER_LEVEL]]
+    if (string.lower(name) == string.lower(g_name)) and (skipLevel or tonumber(g_level) >= sepgp.VARS.minlevel) then
       return g_name, g_class, g_rank, g_officernote
     end
   end
