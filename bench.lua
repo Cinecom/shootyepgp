@@ -8,6 +8,8 @@ local listenTimer = nil
 local listenElapsed = 0
 local checkCounter = 0
 local activeTab = "afk"
+local previousRaidRoster = {}
+local rosterInitialized = false
 
 -- Class colors (same as raidstrike)
 local CLASS_COLORS = {
@@ -446,12 +448,23 @@ function BenchTracker:CreatePlayerRow(parent, index)
         tile = true, tileSize = 8, edgeSize = 4,
         insets = {left = 1, right = 1, top = 1, bottom = 1}
     })
+    readyBtn.baseR, readyBtn.baseG, readyBtn.baseB, readyBtn.baseA = 0.25, 0.25, 0.25, 0.6
     readyBtn:SetScript("OnEnter", function()
+        local r = this.baseR + 0.15
+        local g = this.baseG + 0.15
+        local b = this.baseB + 0.15
+        if r > 1 then r = 1 end
+        if g > 1 then g = 1 end
+        if b > 1 then b = 1 end
+        this:SetBackdropColor(r, g, b, 1)
+        this:GetParent():SetBackdropColor(0.25, 0.35, 0.45, 0.8)
         GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
         GameTooltip:SetText("Ready", 0.2, 0.8, 0.2)
         GameTooltip:Show()
     end)
     readyBtn:SetScript("OnLeave", function()
+        this:SetBackdropColor(this.baseR, this.baseG, this.baseB, this.baseA)
+        this:GetParent():SetBackdropColor(0.15, 0.15, 0.15, 0.6)
         GameTooltip:Hide()
     end)
     frame.readyBtn = readyBtn
@@ -467,12 +480,23 @@ function BenchTracker:CreatePlayerRow(parent, index)
         tile = true, tileSize = 8, edgeSize = 4,
         insets = {left = 1, right = 1, top = 1, bottom = 1}
     })
+    afkBtn.baseR, afkBtn.baseG, afkBtn.baseB, afkBtn.baseA = 0.25, 0.25, 0.25, 0.6
     afkBtn:SetScript("OnEnter", function()
+        local r = this.baseR + 0.15
+        local g = this.baseG + 0.15
+        local b = this.baseB + 0.15
+        if r > 1 then r = 1 end
+        if g > 1 then g = 1 end
+        if b > 1 then b = 1 end
+        this:SetBackdropColor(r, g, b, 1)
+        this:GetParent():SetBackdropColor(0.25, 0.35, 0.45, 0.8)
         GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
         GameTooltip:SetText("AFK", 0.8, 0.2, 0.2)
         GameTooltip:Show()
     end)
     afkBtn:SetScript("OnLeave", function()
+        this:SetBackdropColor(this.baseR, this.baseG, this.baseB, this.baseA)
+        this:GetParent():SetBackdropColor(0.15, 0.15, 0.15, 0.6)
         GameTooltip:Hide()
     end)
     frame.afkBtn = afkBtn
@@ -484,18 +508,24 @@ end
 function BenchTracker:SetRadioState(frame, state)
     -- state: "ready", "afk", or "none"
     if state == "ready" then
+        frame.readyBtn.baseR, frame.readyBtn.baseG, frame.readyBtn.baseB, frame.readyBtn.baseA = 0.1, 0.7, 0.1, 0.9
         frame.readyBtn:SetBackdropColor(0.1, 0.7, 0.1, 0.9)
         frame.readyBtn:SetBackdropBorderColor(0.1, 0.5, 0.1, 1)
+        frame.afkBtn.baseR, frame.afkBtn.baseG, frame.afkBtn.baseB, frame.afkBtn.baseA = 0.25, 0.25, 0.25, 0.6
         frame.afkBtn:SetBackdropColor(0.25, 0.25, 0.25, 0.6)
         frame.afkBtn:SetBackdropBorderColor(0.4, 0.4, 0.4, 0.8)
     elseif state == "afk" then
+        frame.readyBtn.baseR, frame.readyBtn.baseG, frame.readyBtn.baseB, frame.readyBtn.baseA = 0.25, 0.25, 0.25, 0.6
         frame.readyBtn:SetBackdropColor(0.25, 0.25, 0.25, 0.6)
         frame.readyBtn:SetBackdropBorderColor(0.4, 0.4, 0.4, 0.8)
+        frame.afkBtn.baseR, frame.afkBtn.baseG, frame.afkBtn.baseB, frame.afkBtn.baseA = 0.8, 0.1, 0.1, 0.9
         frame.afkBtn:SetBackdropColor(0.8, 0.1, 0.1, 0.9)
         frame.afkBtn:SetBackdropBorderColor(0.6, 0.1, 0.1, 1)
     else
+        frame.readyBtn.baseR, frame.readyBtn.baseG, frame.readyBtn.baseB, frame.readyBtn.baseA = 0.25, 0.25, 0.25, 0.6
         frame.readyBtn:SetBackdropColor(0.25, 0.25, 0.25, 0.6)
         frame.readyBtn:SetBackdropBorderColor(0.4, 0.4, 0.4, 0.8)
+        frame.afkBtn.baseR, frame.afkBtn.baseG, frame.afkBtn.baseB, frame.afkBtn.baseA = 0.25, 0.25, 0.25, 0.6
         frame.afkBtn:SetBackdropColor(0.25, 0.25, 0.25, 0.6)
         frame.afkBtn:SetBackdropBorderColor(0.4, 0.4, 0.4, 0.8)
     end
@@ -724,10 +754,13 @@ end
 
 function BenchTracker:LogEPAward(epAmount)
     local timestamp = BenchTracker:GetTimestamp()
-    local members = BenchTracker:GetRaidMembers()
     local nameList = {}
-    for i = 1, table.getn(members) do
-        table.insert(nameList, members[i].name)
+    local raidSize = GetNumRaidMembers()
+    for i = 1, raidSize do
+        local name, rank, subgroup, level, class, fileName, zone, online = GetRaidRosterInfo(i)
+        if name and online then
+            table.insert(nameList, name)
+        end
     end
     table.sort(nameList)
 
@@ -745,10 +778,116 @@ function BenchTracker:LogEPAward(epAmount)
     end
 end
 
+function BenchTracker:IsInBenchRaid(playerName)
+    local members = BenchTracker:GetRaidMembers()
+    for i = 1, table.getn(members) do
+        if members[i].name == playerName then
+            return true
+        end
+    end
+    return false
+end
+
+function BenchTracker:LogIndividualEP(playerName, epAmount)
+    if not BenchTracker:IsInBenchRaid(playerName) then return end
+
+    local timestamp = BenchTracker:GetTimestamp()
+    local entry = {
+        entryType = "ep_individual",
+        timestamp = timestamp,
+        ep = epAmount,
+        player = playerName
+    }
+    table.insert(logEntries, entry)
+    BenchTrackerDB.log = logEntries
+
+    if activeTab == "log" then
+        BenchTracker:UpdateLogDisplay()
+    end
+end
+
+----------------------------------------------------------------
+-- ROSTER CHANGE TRACKING
+----------------------------------------------------------------
+function BenchTracker:GetCurrentRosterMap()
+    local roster = {}
+    local raidSize = GetNumRaidMembers()
+    for i = 1, raidSize do
+        local name, rank, subgroup, level, class = GetRaidRosterInfo(i)
+        if name then
+            roster[name] = class or "Unknown"
+        end
+    end
+    return roster
+end
+
+function BenchTracker:CheckRosterChanges()
+    local currentRoster = BenchTracker:GetCurrentRosterMap()
+
+    if not rosterInitialized then
+        previousRaidRoster = currentRoster
+        rosterInitialized = true
+        return
+    end
+
+    local timestamp = BenchTracker:GetTimestamp()
+    local changed = false
+
+    -- Check for new players (joined)
+    for name, class in pairs(currentRoster) do
+        if not previousRaidRoster[name] then
+            local englishClass = BenchTracker:GetEnglishClass(class)
+            local entry = {
+                entryType = "roster_join",
+                timestamp = timestamp,
+                player = name,
+                class = englishClass
+            }
+            table.insert(logEntries, entry)
+            changed = true
+        end
+    end
+
+    -- Check for removed players (left)
+    for name, class in pairs(previousRaidRoster) do
+        if not currentRoster[name] then
+            local englishClass = BenchTracker:GetEnglishClass(class)
+            local entry = {
+                entryType = "roster_leave",
+                timestamp = timestamp,
+                player = name,
+                class = englishClass
+            }
+            table.insert(logEntries, entry)
+            changed = true
+        end
+    end
+
+    if changed then
+        BenchTrackerDB.log = logEntries
+        if activeTab == "log" then
+            BenchTracker:UpdateLogDisplay()
+        end
+    end
+
+    previousRaidRoster = currentRoster
+end
+
 ----------------------------------------------------------------
 -- LOG DISPLAY
 ----------------------------------------------------------------
-local logFontStrings = {}
+local LOG_LINE_HEIGHT = 12
+local logEntryFrames = {}
+local emptyLogFS = nil
+local pendingDeleteIndex = nil
+
+local function GetWrappedHeight(fs, maxWidth)
+    local textWidth = fs:GetStringWidth()
+    if textWidth <= 0 then return LOG_LINE_HEIGHT end
+    local numLines = math.ceil(textWidth / maxWidth)
+    if numLines < 1 then numLines = 1 end
+    return numLines * LOG_LINE_HEIGHT
+end
 
 function BenchTracker:ClearLog()
     if not BenchTracker:IsOfficer() then return end
@@ -758,6 +897,33 @@ function BenchTracker:ClearLog()
     BenchTrackerDB.checkCounter = 0
     DEFAULT_CHAT_FRAME:AddMessage("|cFFFFFF00BenchTracker: Log cleared.|r")
     BenchTracker:UpdateLogDisplay()
+end
+
+StaticPopupDialogs["BENCH_CONFIRM_DELETE"] = {
+    text = "Are you sure you want to delete this log entry?",
+    button1 = "Yes",
+    button2 = "No",
+    OnAccept = function()
+        if pendingDeleteIndex then
+            BenchTracker:DeleteLogEntry(pendingDeleteIndex)
+            pendingDeleteIndex = nil
+        end
+    end,
+    OnCancel = function()
+        pendingDeleteIndex = nil
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+}
+
+function BenchTracker:DeleteLogEntry(index)
+    if index >= 1 and index <= table.getn(logEntries) then
+        table.remove(logEntries, index)
+        BenchTrackerDB.log = logEntries
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFFFFF00BenchTracker: Log entry deleted.|r")
+        BenchTracker:UpdateLogDisplay()
+    end
 end
 
 function BenchTracker:UpdateLogDisplay()
@@ -774,45 +940,131 @@ function BenchTracker:UpdateLogDisplay()
     end
 
     local scrollChild = mainFrame.logScrollChild
+    local isOfficer = BenchTracker:IsOfficer()
 
-    -- Hide all existing log text
-    for i = 1, table.getn(logFontStrings) do
-        logFontStrings[i]:Hide()
+    -- Hide all existing entry frames
+    for i = 1, table.getn(logEntryFrames) do
+        logEntryFrames[i]:Hide()
     end
+    if emptyLogFS then emptyLogFS:Hide() end
 
     local yOffset = 0
-    local fsIndex = 0
+    local entryIdx = 0
 
-    local function getFS()
-        fsIndex = fsIndex + 1
-        if not logFontStrings[fsIndex] then
-            logFontStrings[fsIndex] = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    local function getEntryFrame()
+        entryIdx = entryIdx + 1
+        if not logEntryFrames[entryIdx] then
+            local ef = CreateFrame("Frame", "BenchLogEntryFrame" .. entryIdx, scrollChild)
+            ef:SetWidth(245)
+            ef:SetBackdrop({
+                bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+                edgeFile = nil, tile = true, tileSize = 16,
+                insets = {left = 0, right = 0, top = 0, bottom = 0}
+            })
+            ef:SetBackdropColor(0, 0, 0, 0)
+            ef:EnableMouse(true)
+            ef:SetScript("OnEnter", function()
+                this:SetBackdropColor(0.25, 0.28, 0.4, 0.35)
+            end)
+            ef:SetScript("OnLeave", function()
+                this:SetBackdropColor(0, 0, 0, 0)
+            end)
+            ef.fontStrings = {}
+            ef.fsCount = 0
+            ef.deleteBtn = nil
+            logEntryFrames[entryIdx] = ef
         end
-        local fs = logFontStrings[fsIndex]
+        local ef = logEntryFrames[entryIdx]
+        for i = 1, table.getn(ef.fontStrings) do
+            ef.fontStrings[i]:Hide()
+        end
+        ef.fsCount = 0
+        if ef.deleteBtn then ef.deleteBtn:Hide() end
+        ef:ClearAllPoints()
+        ef:SetBackdropColor(0, 0, 0, 0)
+        ef:Show()
+        return ef
+    end
+
+    local function getEntryFS(ef)
+        ef.fsCount = ef.fsCount + 1
+        if not ef.fontStrings[ef.fsCount] then
+            ef.fontStrings[ef.fsCount] = ef:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        end
+        local fs = ef.fontStrings[ef.fsCount]
         fs:ClearAllPoints()
         fs:Show()
         return fs
+    end
+
+    local function getEntryDeleteBtn(ef)
+        if not ef.deleteBtn then
+            local btn = CreateFrame("Button", nil, ef)
+            btn:SetWidth(12)
+            btn:SetHeight(12)
+            btn:SetBackdrop({
+                bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+                edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+                tile = true, tileSize = 8, edgeSize = 4,
+                insets = {left = 1, right = 1, top = 1, bottom = 1}
+            })
+            btn:SetBackdropColor(0.6, 0.15, 0.15, 0.8)
+            btn:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
+            local btnText = btn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            btnText:SetPoint("CENTER", btn, "CENTER", 0, 0)
+            btnText:SetText("x")
+            btnText:SetTextColor(1, 1, 1, 1)
+            btn:SetScript("OnEnter", function()
+                this:SetBackdropColor(0.9, 0.2, 0.2, 1)
+                this:GetParent():SetBackdropColor(0.25, 0.28, 0.4, 0.35)
+                GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
+                GameTooltip:SetText("Delete this entry", 1, 0.3, 0.3)
+                GameTooltip:Show()
+            end)
+            btn:SetScript("OnLeave", function()
+                this:SetBackdropColor(0.6, 0.15, 0.15, 0.8)
+                this:GetParent():SetBackdropColor(0, 0, 0, 0)
+                GameTooltip:Hide()
+            end)
+            ef.deleteBtn = btn
+        end
+        ef.deleteBtn:ClearAllPoints()
+        ef.deleteBtn:Show()
+        return ef.deleteBtn
     end
 
     -- Render entries in reverse order (newest first)
     local numEntries = table.getn(logEntries)
     for idx = numEntries, 1, -1 do
         local entry = logEntries[idx]
+        local ef = getEntryFrame()
+        local localY = 0
 
         if entry.entryType == "afk" then
             -- Header
-            local header = getFS()
-            header:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 2, yOffset)
-            header:SetWidth(240)
+            local header = getEntryFS(ef)
+            header:SetPoint("TOPLEFT", ef, "TOPLEFT", 2, localY)
             header:SetJustifyH("LEFT")
+            local headerWidth = 240
+            if isOfficer then
+                headerWidth = 220
+                local delBtn = getEntryDeleteBtn(ef)
+                delBtn:SetPoint("TOPRIGHT", ef, "TOPRIGHT", -2, localY)
+                delBtn.entryIndex = idx
+                delBtn:SetScript("OnClick", function()
+                    pendingDeleteIndex = this.entryIndex
+                    StaticPopup_Show("BENCH_CONFIRM_DELETE")
+                end)
+            end
+            header:SetWidth(headerWidth)
             header:SetText("|cFFFFCC00" .. entry.timestamp .. " AFK Check #" .. entry.checkNum .. "|r")
             header:SetTextColor(1, 0.8, 0, 1)
-            yOffset = yOffset - 12
+            localY = localY - (GetWrappedHeight(header, headerWidth) + 2)
 
             -- Ready list
             if table.getn(entry.ready) > 0 then
-                local readyLabel = getFS()
-                readyLabel:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 6, yOffset)
+                local readyLabel = getEntryFS(ef)
+                readyLabel:SetPoint("TOPLEFT", ef, "TOPLEFT", 6, localY)
                 readyLabel:SetWidth(236)
                 readyLabel:SetJustifyH("LEFT")
                 local readyStr = "|cFF00CC00Ready:|r "
@@ -822,13 +1074,13 @@ function BenchTracker:UpdateLogDisplay()
                 end
                 readyLabel:SetText(readyStr)
                 readyLabel:SetTextColor(0.8, 0.8, 0.8, 1)
-                yOffset = yOffset - 12
+                localY = localY - (GetWrappedHeight(readyLabel, 236) + 2)
             end
 
             -- AFK list
             if table.getn(entry.afk) > 0 then
-                local afkLabel = getFS()
-                afkLabel:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 6, yOffset)
+                local afkLabel = getEntryFS(ef)
+                afkLabel:SetPoint("TOPLEFT", ef, "TOPLEFT", 6, localY)
                 afkLabel:SetWidth(236)
                 afkLabel:SetJustifyH("LEFT")
                 local afkStr = "|cFFCC0000AFK:|r "
@@ -838,24 +1090,33 @@ function BenchTracker:UpdateLogDisplay()
                 end
                 afkLabel:SetText(afkStr)
                 afkLabel:SetTextColor(0.8, 0.8, 0.8, 1)
-                yOffset = yOffset - 12
+                localY = localY - (GetWrappedHeight(afkLabel, 236) + 2)
             end
-
-            yOffset = yOffset - 4
 
         elseif entry.entryType == "ep" then
             -- EP award header
-            local header = getFS()
-            header:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 2, yOffset)
-            header:SetWidth(240)
+            local header = getEntryFS(ef)
+            header:SetPoint("TOPLEFT", ef, "TOPLEFT", 2, localY)
             header:SetJustifyH("LEFT")
+            local headerWidth = 240
+            if isOfficer then
+                headerWidth = 220
+                local delBtn = getEntryDeleteBtn(ef)
+                delBtn:SetPoint("TOPRIGHT", ef, "TOPRIGHT", -2, localY)
+                delBtn.entryIndex = idx
+                delBtn:SetScript("OnClick", function()
+                    pendingDeleteIndex = this.entryIndex
+                    StaticPopup_Show("BENCH_CONFIRM_DELETE")
+                end)
+            end
+            header:SetWidth(headerWidth)
             header:SetText("|cFF33BBFF" .. entry.timestamp .. " EP Award: +" .. entry.ep .. " EP|r")
             header:SetTextColor(0.2, 0.7, 1, 1)
-            yOffset = yOffset - 12
+            localY = localY - (GetWrappedHeight(header, headerWidth) + 2)
 
             -- Player list
-            local playerLabel = getFS()
-            playerLabel:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 6, yOffset)
+            local playerLabel = getEntryFS(ef)
+            playerLabel:SetPoint("TOPLEFT", ef, "TOPLEFT", 6, localY)
             playerLabel:SetWidth(236)
             playerLabel:SetJustifyH("LEFT")
             local pStr = ""
@@ -865,20 +1126,78 @@ function BenchTracker:UpdateLogDisplay()
             end
             playerLabel:SetText(pStr)
             playerLabel:SetTextColor(0.7, 0.7, 0.7, 1)
-            yOffset = yOffset - 12
+            localY = localY - (GetWrappedHeight(playerLabel, 236) + 2)
 
-            yOffset = yOffset - 4
+        elseif entry.entryType == "ep_individual" then
+            -- Individual EP adjust header
+            local header = getEntryFS(ef)
+            header:SetPoint("TOPLEFT", ef, "TOPLEFT", 2, localY)
+            header:SetJustifyH("LEFT")
+            local headerWidth = 240
+            if isOfficer then
+                headerWidth = 220
+                local delBtn = getEntryDeleteBtn(ef)
+                delBtn:SetPoint("TOPRIGHT", ef, "TOPRIGHT", -2, localY)
+                delBtn.entryIndex = idx
+                delBtn:SetScript("OnClick", function()
+                    pendingDeleteIndex = this.entryIndex
+                    StaticPopup_Show("BENCH_CONFIRM_DELETE")
+                end)
+            end
+            header:SetWidth(headerWidth)
+            local epSign = ""
+            if entry.ep >= 0 then epSign = "+" end
+            header:SetText("|cFFDDA0DD" .. entry.timestamp .. " EP Adjust: " .. entry.player .. " " .. epSign .. entry.ep .. " EP|r")
+            header:SetTextColor(0.87, 0.63, 0.87, 1)
+            localY = localY - (GetWrappedHeight(header, headerWidth) + 2)
+
+        elseif entry.entryType == "roster_join" or entry.entryType == "roster_leave" then
+            local header = getEntryFS(ef)
+            header:SetPoint("TOPLEFT", ef, "TOPLEFT", 2, localY)
+            header:SetJustifyH("LEFT")
+            local headerWidth = 240
+            if isOfficer then
+                headerWidth = 220
+                local delBtn = getEntryDeleteBtn(ef)
+                delBtn:SetPoint("TOPRIGHT", ef, "TOPRIGHT", -2, localY)
+                delBtn.entryIndex = idx
+                delBtn:SetScript("OnClick", function()
+                    pendingDeleteIndex = this.entryIndex
+                    StaticPopup_Show("BENCH_CONFIRM_DELETE")
+                end)
+            end
+            header:SetWidth(headerWidth)
+            local color = CLASS_COLORS[entry.class] or {r = 0.6, g = 0.6, b = 0.6}
+            local nameColored = string.format("|cFF%02x%02x%02x%s|r", color.r * 255, color.g * 255, color.b * 255, entry.player)
+            if entry.entryType == "roster_join" then
+                header:SetText("|cFF888888" .. entry.timestamp .. "|r " .. nameColored .. " |cFF00CC00joined|r")
+                header:SetTextColor(0.5, 0.8, 0.5, 1)
+            else
+                header:SetText("|cFF888888" .. entry.timestamp .. "|r " .. nameColored .. " |cFFCC0000left|r")
+                header:SetTextColor(0.8, 0.5, 0.5, 1)
+            end
+            localY = localY - (GetWrappedHeight(header, headerWidth) + 2)
         end
+
+        -- Size and position entry frame
+        local entryHeight = math.abs(localY) + 4
+        ef:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 0, yOffset)
+        ef:SetHeight(entryHeight)
+        yOffset = yOffset - entryHeight
     end
 
     if numEntries == 0 then
-        local emptyMsg = getFS()
-        emptyMsg:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 2, yOffset)
-        emptyMsg:SetWidth(240)
-        emptyMsg:SetJustifyH("LEFT")
-        emptyMsg:SetText("|cFF666666No log entries yet.|r")
-        emptyMsg:SetTextColor(0.4, 0.4, 0.4, 1)
-        yOffset = yOffset - 14
+        if not emptyLogFS then
+            emptyLogFS = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        end
+        emptyLogFS:ClearAllPoints()
+        emptyLogFS:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 2, yOffset)
+        emptyLogFS:SetWidth(240)
+        emptyLogFS:SetJustifyH("LEFT")
+        emptyLogFS:SetText("|cFF666666No log entries yet.|r")
+        emptyLogFS:SetTextColor(0.4, 0.4, 0.4, 1)
+        emptyLogFS:Show()
+        yOffset = yOffset - (GetWrappedHeight(emptyLogFS, 240) + 2)
     end
 
     local contentHeight = math.abs(yOffset) + 10
@@ -935,6 +1254,7 @@ benchEventFrame:SetScript("OnEvent", function()
         DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00BenchTracker loaded! Type /bench to open.|r")
 
     elseif event == "RAID_ROSTER_UPDATE" or event == "PARTY_MEMBERS_CHANGED" then
+        BenchTracker:CheckRosterChanges()
         if mainFrame and mainFrame:IsVisible() and activeTab == "afk" then
             BenchTracker:UpdateAFKDisplay()
         end
@@ -956,6 +1276,8 @@ end)
 ----------------------------------------------------------------
 local original_award_raid_ep = nil
 local original_award_reserve_ep = nil
+local original_givename_ep = nil
+local isBulkAward = false
 
 local epHookFrame = CreateFrame("Frame", "BenchEPHookFrame", UIParent)
 epHookFrame:RegisterEvent("ADDON_LOADED")
@@ -965,15 +1287,28 @@ epHookFrame:SetScript("OnEvent", function()
         if sepgp and sepgp.award_reserve_ep then
             original_award_reserve_ep = sepgp.award_reserve_ep
             sepgp.award_reserve_ep = function(self, ep)
+                isBulkAward = true
                 original_award_reserve_ep(self, ep)
+                isBulkAward = false
                 BenchTracker:LogEPAward(ep)
             end
         end
         if sepgp and sepgp.award_raid_ep then
             original_award_raid_ep = sepgp.award_raid_ep
             sepgp.award_raid_ep = function(self, ep)
+                isBulkAward = true
                 original_award_raid_ep(self, ep)
+                isBulkAward = false
                 BenchTracker:LogEPAward(ep)
+            end
+        end
+        if sepgp and sepgp.givename_ep then
+            original_givename_ep = sepgp.givename_ep
+            sepgp.givename_ep = function(self, getname, ep)
+                original_givename_ep(self, getname, ep)
+                if not isBulkAward then
+                    BenchTracker:LogIndividualEP(getname, ep)
+                end
             end
         end
     end
