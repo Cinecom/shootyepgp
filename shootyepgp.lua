@@ -1122,8 +1122,10 @@ function sepgp:addonComms(prefix,message,channel,sender)
       msg = string.format(L["%s%% decay to EP and GP."],amount)
     elseif who == "RAID" and what == "AWARD" then
       msg = string.format(L["%d EP awarded to Raid."],amount)
+      self._lastRaidAwardReceived = GetTime()
     elseif who == "RESERVES" and what == "AWARD" then
       msg = string.format(L["%d EP awarded to Reserves."],amount)
+      self._lastReserveAwardReceived = GetTime()
     elseif who == "VERSION" then
       local out_of_date, version_type = self:parseVersion(self._versionString,what)
       if (out_of_date) and self._newVersionNotification == nil then
@@ -1290,7 +1292,7 @@ function sepgp:addonComms(prefix,message,channel,sender)
         if pr_decay < 0 then
           self:defaultPrint(string.format(L["Close to EPGP Cap. Next Decay will change your |cffff7f00PR|r by |cffff0000%.4g|r."], pr_decay))
         end
-      else
+      elseif (who == self._playerName) or (for_main) then
         self:my_epgp(for_main)
       end
     end
@@ -1329,16 +1331,18 @@ end
 
 function sepgp:init_notes_v3(guild_index,name,officernote)
   local ep,gp = self:get_ep_v3(name,officernote), self:get_gp_v3(name,officernote)
+  local newnote
   if not (ep and gp) then
     local initstring = string.format("{%d:%d}",0,sepgp.VARS.basegp)
-    local newnote = string.format("%s%s",officernote,initstring)
+    newnote = string.format("%s%s",officernote,initstring)
     newnote = string.gsub(newnote,"(.*)({%d+:%d+})(.*)",sanitizeNote)
-    officernote = newnote
   else
-    officernote = string.gsub(officernote,"(.*)({%d+:%d+})(.*)",sanitizeNote)
+    newnote = string.gsub(officernote,"(.*)({%d+:%d+})(.*)",sanitizeNote)
   end
-  GuildRosterSetOfficerNote(guild_index,officernote,true)
-  return officernote
+  if newnote ~= officernote then
+    GuildRosterSetOfficerNote(guild_index,newnote,true)
+  end
+  return newnote
 end
 
 function sepgp:update_epgp_v3(ep,gp,guild_index,name,officernote,special_action)
@@ -1457,6 +1461,12 @@ end
 
 function sepgp:award_raid_ep(ep) -- awards ep to raid members in zone
   if GetNumRaidMembers()>0 then
+    -- Safety: prevent double-award if another officer already awarded EP to this raid recently
+    if self._lastRaidAwardReceived and (GetTime() - self._lastRaidAwardReceived) < 120 then
+      self:defaultPrint(string.format("|cffff0000Warning: Another officer already awarded EP to a raid in the last 2 minutes. Award blocked to prevent double EP.|r"))
+      self:defaultPrint(string.format("|cffff0000If this was intentional, wait 2 minutes or /reload first.|r"))
+      return
+    end
     for i = 1, GetNumRaidMembers(true) do
       local name, rank, subgroup, level, class, fileName, zone, online, isDead = GetRaidRosterInfo(i)
       if level >= sepgp.VARS.minlevel then
@@ -1473,6 +1483,12 @@ end
 
 function sepgp:award_reserve_ep(ep) -- awards ep to reserve list
   if table.getn(sepgp.reserves) > 0 then
+    -- Safety: prevent double-award if another officer already awarded EP to reserves recently
+    if self._lastReserveAwardReceived and (GetTime() - self._lastReserveAwardReceived) < 120 then
+      self:defaultPrint(string.format("|cffff0000Warning: Another officer already awarded EP to reserves in the last 2 minutes. Award blocked to prevent double EP.|r"))
+      self:defaultPrint(string.format("|cffff0000If this was intentional, wait 2 minutes or /reload first.|r"))
+      return
+    end
     for i, reserve in ipairs(sepgp.reserves) do
       local name, class, rank, alt = unpack(reserve)
       self:givename_ep(name,ep)
