@@ -90,4 +90,3 @@ SlashCmdList["SNOWBALL"] = function()
     end
 end
 
-DEFAULT_CHAT_FRAME:AddMessage("|cFFFF6B6B[Idiot]|r Loaded. /snowball to toggle.")
