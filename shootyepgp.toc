@@ -48,3 +48,4 @@ logs.lua
 matrix.lua
 raidstrike.lua
 bench.lua
+snowball.lua
