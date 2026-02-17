@@ -84,9 +84,9 @@ SLASH_SNOWBALL1 = "/snowball"
 SlashCmdList["SNOWBALL"] = function()
     snowballEnabled = not snowballEnabled
     if snowballEnabled then
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFFF6B6B[Idiot]|r Snowball |cFF00FF00Enabled|r")
+        DEFAULT_CHAT_FRAME:AddMessage("Snowball tracking |cFF00FF00Enabled|r")
     else
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFFF6B6B[Idiot]|r Snowball |cFFFF0000Disabled|r")
+        DEFAULT_CHAT_FRAME:AddMessage("Snowball tracking |cFFFF0000Disabled|r")
     end
 end
 
