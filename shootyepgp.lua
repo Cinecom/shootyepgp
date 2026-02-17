@@ -314,6 +314,21 @@ function sepgp:buildMenu()
         sepgp:SetRefresh(true)
       end,
     }
+    options.args["autobidwindow"] = {
+      type = "toggle",
+      name = L["Auto-open Bid Window"],
+      desc = L["Automatically open the bid window when loot is announced."],
+      order = 81,
+      hidden = function() return not (admin()) end,
+      get = function() return sepgp_autobidwindow == 1 end,
+      set = function(v)
+        if sepgp_autobidwindow == 1 then
+          sepgp_autobidwindow = 0
+        else
+          sepgp_autobidwindow = 1
+        end
+      end,
+    }
     options.args["loot_sounds"] = {
       type = "toggle",
       name = "Loot sounds",
@@ -467,6 +482,7 @@ function sepgp:OnInitialize() -- ADDON_LOADED (1) unless LoD
   if sepgp_discount == nil then sepgp_discount = 0.25 end
   if sepgp_altspool == nil then sepgp_altspool = false end
   if sepgp_altpercent == nil then sepgp_altpercent = 1.0 end
+  if sepgp_autobidwindow == nil then sepgp_autobidwindow = 0 end
   if sepgp_log == nil then sepgp_log = {} end
   if sepgp_looted == nil then sepgp_looted = {} end
   if sepgp_debug == nil then sepgp_debug = {} end
@@ -1226,8 +1242,12 @@ function sepgp:addonComms(prefix,message,channel,sender)
         sepgp.bid_item.name = coloredName
         running_bid = true
         self:ScheduleEvent("shootyepgpBidTimeout", self.clearBids, 300, self)
-        -- DO NOT auto-open bid window for officers, they must open manually
-        sepgp_bids:Refresh()
+        -- Auto-open bid window if the officer has the option enabled
+        if sepgp_autobidwindow == 1 then
+          sepgp_bids:Toggle(true)
+        else
+          sepgp_bids:Refresh()
+        end
       end
     -- Handle bid data broadcast from master looter
     elseif who == "BIDS" then
@@ -1993,7 +2013,7 @@ function sepgp:captureLootCall(text, sender)
     if (link_found) then
       local quality = hexColorQuality[itemColor] or -1
       if (quality >= 3) then
-        if (IsRaidLeader() or self:lootMaster()) then
+        if (self:lootMaster()) then
           self:clearBids(true)
           sepgp.bid_item.link = itemString
           sepgp.bid_item.linkFull = itemLink
@@ -2019,7 +2039,7 @@ lootBid.msos = {".*[oO][sS][pP][rR][iI][oO].*"}
 
 function sepgp:captureBid(text, sender)
   if not running_bid then return end
-  if not (IsRaidLeader() or self:lootMaster()) then return end
+  if not (self:lootMaster()) then return end
   if not sepgp.bid_item.link then return end
 
   local mskw_found, oskw_found, msoskw_found
@@ -2117,8 +2137,8 @@ function sepgp:clearBids(reset)
   if reset~=nil then
     self:debugPrint(L["Clearing old Bids"])
   end
-  -- Broadcast clear to officers if we are the ML/RL
-  if (IsRaidLeader() or self:lootMaster()) and running_bid then
+  -- Broadcast clear to officers if we are the ML
+  if (self:lootMaster()) and running_bid then
     self:broadcastBidClear()
   end
   sepgp.bid_item = {}

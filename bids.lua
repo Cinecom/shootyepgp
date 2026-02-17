@@ -131,7 +131,7 @@ end
 
 -- Send attention signal to officers (ML only)
 function sepgp_bids:sendAttention()
-  if IsRaidLeader() or sepgp:lootMaster() then
+  if sepgp:lootMaster() then
     sepgp:broadcastBidAttention()
     sepgp:defaultPrint(L["Attention signal sent to officers."])
   end
@@ -192,7 +192,7 @@ function sepgp_bids:OnTooltipUpdate()
       "text3", offspec
     )
   -- Countdown button (only for Master Looter)
-  if IsRaidLeader() or sepgp:lootMaster() then
+  if sepgp:lootMaster() then
     local countdownHeader = T:AddCategory(
         "columns", 2,
         "text","","child_textR",  1, "child_textG",  1, "child_textB",  1,"child_justify", "LEFT",
@@ -206,7 +206,7 @@ function sepgp_bids:OnTooltipUpdate()
       )
   end
   -- Attention button (only for Master Looter)
-  if IsRaidLeader() or sepgp:lootMaster() then
+  if sepgp:lootMaster() then
     local attentionCat = T:AddCategory(
         "columns", 1,
         "text", "",

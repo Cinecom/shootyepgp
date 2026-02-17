@@ -220,6 +220,8 @@ Results will print here when done.]],
   ["Alts"] = true,
   ["New Minimum EP"] = true,
   -- bid broadcasting
+  ["Auto-open Bid Window"] = true,
+  ["Automatically open the bid window when loot is announced."] = true,
   ["Attention"] = true,
   ["Attention signal sent to officers."] = true,
   ["Attention! Master Looter wants you to check the bid window."] = true,
@@ -442,6 +444,8 @@ L:RegisterTranslations("zhCN", function() return {
   ["Set Minimum EP"] = "设置最小值 EP",
   ["New Minimum EP"] = "新最小值 EP",
   -- bid broadcasting
+  ["Auto-open Bid Window"] = "自动打开竞标窗口",
+  ["Automatically open the bid window when loot is announced."] = "当拾取被宣布时自动打开竞标窗口.",
   ["Attention"] = "注意",
   ["Attention signal sent to officers."] = "注意信号已发送给官员.",
   ["Attention! Master Looter wants you to check the bid window."] = "注意! 分配者希望你查看竞标窗口.",
