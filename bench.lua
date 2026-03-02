@@ -8,8 +8,6 @@ local listenTimer = nil
 local listenElapsed = 0
 local checkCounter = 0
 local activeTab = "afk"
-local previousRaidRoster = {}
-local rosterInitialized = false
 
 -- Class colors (same as raidstrike)
 local CLASS_COLORS = {
@@ -807,71 +805,6 @@ function BenchTracker:LogIndividualEP(playerName, epAmount)
 end
 
 ----------------------------------------------------------------
--- ROSTER CHANGE TRACKING
-----------------------------------------------------------------
-function BenchTracker:GetCurrentRosterMap()
-    local roster = {}
-    local raidSize = GetNumRaidMembers()
-    for i = 1, raidSize do
-        local name, rank, subgroup, level, class = GetRaidRosterInfo(i)
-        if name then
-            roster[name] = class or "Unknown"
-        end
-    end
-    return roster
-end
-
-function BenchTracker:CheckRosterChanges()
-    local currentRoster = BenchTracker:GetCurrentRosterMap()
-
-    if not rosterInitialized then
-        previousRaidRoster = currentRoster
-        rosterInitialized = true
-        return
-    end
-
-    local timestamp = BenchTracker:GetTimestamp()
-    local changed = false
-
-    -- Check for new players (joined)
-    for name, class in pairs(currentRoster) do
-        if not previousRaidRoster[name] then
-            local englishClass = BenchTracker:GetEnglishClass(class)
-            local entry = {
-                entryType = "roster_join",
-                timestamp = timestamp,
-                player = name,
-                class = englishClass
-            }
-            table.insert(logEntries, entry)
-            changed = true
-        end
-    end
-
-    -- Check for removed players (left)
-    for name, class in pairs(previousRaidRoster) do
-        if not currentRoster[name] then
-            local englishClass = BenchTracker:GetEnglishClass(class)
-            local entry = {
-                entryType = "roster_leave",
-                timestamp = timestamp,
-                player = name,
-                class = englishClass
-            }
-            table.insert(logEntries, entry)
-            changed = true
-        end
-    end
-
-    if changed then
-        BenchTrackerDB.log = logEntries
-        if activeTab == "log" then
-            BenchTracker:UpdateLogDisplay()
-        end
-    end
-
-    previousRaidRoster = currentRoster
-end
 
 ----------------------------------------------------------------
 -- LOG DISPLAY
@@ -1151,32 +1084,6 @@ function BenchTracker:UpdateLogDisplay()
             header:SetTextColor(0.87, 0.63, 0.87, 1)
             localY = localY - (GetWrappedHeight(header, headerWidth) + 2)
 
-        elseif entry.entryType == "roster_join" or entry.entryType == "roster_leave" then
-            local header = getEntryFS(ef)
-            header:SetPoint("TOPLEFT", ef, "TOPLEFT", 2, localY)
-            header:SetJustifyH("LEFT")
-            local headerWidth = 240
-            if isOfficer then
-                headerWidth = 220
-                local delBtn = getEntryDeleteBtn(ef)
-                delBtn:SetPoint("TOPRIGHT", ef, "TOPRIGHT", -2, localY)
-                delBtn.entryIndex = idx
-                delBtn:SetScript("OnClick", function()
-                    pendingDeleteIndex = this.entryIndex
-                    StaticPopup_Show("BENCH_CONFIRM_DELETE")
-                end)
-            end
-            header:SetWidth(headerWidth)
-            local color = CLASS_COLORS[entry.class] or {r = 0.6, g = 0.6, b = 0.6}
-            local nameColored = string.format("|cFF%02x%02x%02x%s|r", color.r * 255, color.g * 255, color.b * 255, entry.player)
-            if entry.entryType == "roster_join" then
-                header:SetText("|cFF888888" .. entry.timestamp .. "|r " .. nameColored .. " |cFF00CC00joined|r")
-                header:SetTextColor(0.5, 0.8, 0.5, 1)
-            else
-                header:SetText("|cFF888888" .. entry.timestamp .. "|r " .. nameColored .. " |cFFCC0000left|r")
-                header:SetTextColor(0.8, 0.5, 0.5, 1)
-            end
-            localY = localY - (GetWrappedHeight(header, headerWidth) + 2)
         end
 
         -- Size and position entry frame
@@ -1229,7 +1136,6 @@ end
 ----------------------------------------------------------------
 local benchEventFrame = CreateFrame("Frame", "BenchEventFrame", UIParent)
 benchEventFrame:RegisterEvent("RAID_ROSTER_UPDATE")
-benchEventFrame:RegisterEvent("PARTY_MEMBERS_CHANGED")
 benchEventFrame:RegisterEvent("CHAT_MSG_GUILD")
 benchEventFrame:RegisterEvent("CHAT_MSG_RAID")
 benchEventFrame:RegisterEvent("CHAT_MSG_RAID_LEADER")
@@ -1253,8 +1159,7 @@ benchEventFrame:SetScript("OnEvent", function()
         end
         DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00BenchTracker loaded! Type /bench to open.|r")
 
-    elseif event == "RAID_ROSTER_UPDATE" or event == "PARTY_MEMBERS_CHANGED" then
-        BenchTracker:CheckRosterChanges()
+    elseif event == "RAID_ROSTER_UPDATE" then
         if mainFrame and mainFrame:IsVisible() and activeTab == "afk" then
             BenchTracker:UpdateAFKDisplay()
         end
