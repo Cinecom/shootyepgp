@@ -1137,10 +1137,10 @@ function sepgp:addonComms(prefix,message,channel,sender)
     elseif admin() and what == "GP" and who and amount then
       -- Log GP changes for OTHER players (so DLL can track corrections)
       local old_gp = (new_gp or 0) - amount
-      msg = string.format(L["Awarding %d GP to %s. (Previous: %d, New: %d)"],amount,who,old_gp,math.max(sepgp.VARS.basegp,new_gp or 0))
+      msg = string.format(L["Awarding %d GP to %s%s. (Previous: %d, New: %d)"],amount,who,"",old_gp,math.max(sepgp.VARS.basegp,new_gp or 0))
     elseif admin() and what == "EP" and who and amount and amount < 0 then
       -- Log EP penalties for OTHER players
-      msg = string.format(L["%s EP Penalty to %s."],amount,who)
+      msg = string.format(L["%s EP Penalty to %s%s."],amount,who,"")
     elseif who == "ALL" and what == "DECAY" then
       msg = string.format(L["%s%% decay to EP and GP."],amount)
     elseif who == "RAID" and what == "AWARD" then
