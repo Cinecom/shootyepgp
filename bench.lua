@@ -8,6 +8,7 @@ local listenTimer = nil
 local listenElapsed = 0
 local checkCounter = 0
 local activeTab = "afk"
+local benchSessionActive = false
 
 -- Class colors (same as raidstrike)
 local CLASS_COLORS = {
@@ -252,6 +253,87 @@ function BenchTracker:CreateMainFrame()
         BenchTracker:ManualLogAFKCheck()
     end)
     mainFrame.logButton = logBtn
+
+    -- Bench this Raid button (centered above the two bottom buttons)
+    local benchRaidBtn = CreateFrame("Button", nil, afkContent)
+    benchRaidBtn:SetWidth(180)
+    benchRaidBtn:SetHeight(18)
+    benchRaidBtn:SetPoint("BOTTOM", afkContent, "BOTTOM", 0, 26)
+    benchRaidBtn:SetBackdrop({
+        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 8, edgeSize = 4,
+        insets = {left = 1, right = 1, top = 1, bottom = 1}
+    })
+    benchRaidBtn:SetBackdropColor(0.4, 0.2, 0.6, 0.9)
+    benchRaidBtn:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
+    local benchRaidBtnText = benchRaidBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    benchRaidBtnText:SetPoint("CENTER", benchRaidBtn, "CENTER", 0, 0)
+    benchRaidBtnText:SetText("Bench this Raid")
+    benchRaidBtnText:SetTextColor(1, 0.85, 0.5, 1)
+    benchRaidBtn:SetScript("OnEnter", function()
+        this:SetBackdropColor(0.5, 0.3, 0.7, 1)
+    end)
+    benchRaidBtn:SetScript("OnLeave", function()
+        if benchSessionActive then
+            this:SetBackdropColor(0.2, 0.5, 0.2, 0.9)
+        else
+            this:SetBackdropColor(0.4, 0.2, 0.6, 0.9)
+        end
+    end)
+    benchRaidBtn:SetScript("OnClick", function()
+        if benchSessionActive then
+            BenchTracker:EndBenchSession()
+            benchRaidBtnText:SetText("Bench this Raid")
+            benchRaidBtnText:SetTextColor(1, 0.85, 0.5, 1)
+            benchRaidBtn:SetBackdropColor(0.4, 0.2, 0.6, 0.9)
+        else
+            BenchTracker:StartBenchSession()
+            benchRaidBtnText:SetText("End Bench Session")
+            benchRaidBtnText:SetTextColor(0.5, 1, 0.5, 1)
+            benchRaidBtn:SetBackdropColor(0.2, 0.5, 0.2, 0.9)
+        end
+    end)
+    -- Start disabled until live check confirms a raid
+    benchRaidBtn:Disable()
+    benchRaidBtnText:SetText("Checking...")
+    benchRaidBtnText:SetTextColor(0.5, 0.5, 0.5, 1)
+    benchRaidBtn:SetBackdropColor(0.2, 0.2, 0.2, 0.9)
+
+    mainFrame.benchRaidButton = benchRaidBtn
+    mainFrame.benchRaidButtonText = benchRaidBtnText
+
+    -- Update bench button state based on WEBLINK_RAID_LIVE (set by DLL every 1s)
+    local benchBtnUpdateFrame = CreateFrame("Frame")
+    benchBtnUpdateFrame.elapsed = 0
+    benchBtnUpdateFrame:SetScript("OnUpdate", function()
+        this.elapsed = this.elapsed + arg1
+        if this.elapsed < 2 then return end
+        this.elapsed = 0
+        if not mainFrame or not mainFrame.benchRaidButton then return end
+        if not BenchTracker:IsOfficer() then
+            mainFrame.benchRaidButton:Hide()
+            return
+        end
+        mainFrame.benchRaidButton:Show()
+        if benchSessionActive then return end
+        if WEBLINK_RAID_LIVE then
+            mainFrame.benchRaidButton:Enable()
+            mainFrame.benchRaidButtonText:SetTextColor(1, 0.85, 0.5, 1)
+            mainFrame.benchRaidButton:SetBackdropColor(0.4, 0.2, 0.6, 0.9)
+            local title = WEBLINK_RAID_TITLE or ""
+            if title ~= "" then
+                mainFrame.benchRaidButtonText:SetText("Bench: " .. title)
+            else
+                mainFrame.benchRaidButtonText:SetText("Bench this Raid")
+            end
+        else
+            mainFrame.benchRaidButton:Disable()
+            mainFrame.benchRaidButtonText:SetText("No Live Raid")
+            mainFrame.benchRaidButtonText:SetTextColor(0.5, 0.5, 0.5, 1)
+            mainFrame.benchRaidButton:SetBackdropColor(0.2, 0.2, 0.2, 0.9)
+        end
+    end)
 
     -- Log content area
     local logContent = CreateFrame("Frame", "BenchLogContent", mainFrame)
@@ -615,6 +697,58 @@ function BenchTracker:UpdateAFKDisplay()
     if mainFrame.afkScrollFrame then
         mainFrame.afkScrollFrame:UpdateScrollChildRect()
     end
+end
+
+----------------------------------------------------------------
+-- BENCH SESSION (website sync via DLL)
+----------------------------------------------------------------
+function BenchTracker:GetEnglishClass(localizedClass)
+    -- Map localized class names to English (Turtle WoW uses English client mostly)
+    local map = {
+        ["Warrior"] = "Warrior", ["Hunter"] = "Hunter", ["Mage"] = "Mage",
+        ["Priest"] = "Priest", ["Rogue"] = "Rogue", ["Shaman"] = "Shaman",
+        ["Warlock"] = "Warlock", ["Druid"] = "Druid", ["Paladin"] = "Paladin",
+    }
+    return map[localizedClass] or localizedClass or "Unknown"
+end
+
+function BenchTracker:SendBenchRoster()
+    if not WebLink_PostBench then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFFF0000BenchTracker: WebLink DLL not loaded! Cannot sync bench.|r")
+        return
+    end
+    local members = BenchTracker:GetRaidMembers()
+    if table.getn(members) == 0 then return end
+
+    local parts = {}
+    for i = 1, table.getn(members) do
+        local m = members[i]
+        local cls = BenchTracker:GetEnglishClass(m.class)
+        table.insert(parts, '{"name":"' .. m.name .. '","class":"' .. cls .. '"}')
+    end
+    local officer = UnitName("player") or "Unknown"
+    local json = '{"action":"sync_roster","officer":"' .. officer .. '","players":[' .. table.concat(parts, ",") .. ']}'
+
+    WebLink_PostBench(json)
+end
+
+function BenchTracker:StartBenchSession()
+    if GetNumRaidMembers() == 0 then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFFF0000BenchTracker: You must be in a raid to start a bench session.|r")
+        return
+    end
+    benchSessionActive = true
+    BenchTracker:SendBenchRoster()
+    DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00BenchTracker: Bench session started! Roster synced to website.|r")
+end
+
+function BenchTracker:EndBenchSession()
+    if not benchSessionActive then return end
+    benchSessionActive = false
+    if WebLink_PostBench then
+        WebLink_PostBench('{"action":"end_session"}')
+    end
+    DEFAULT_CHAT_FRAME:AddMessage("|cFFFFFF00BenchTracker: Bench session ended.|r")
 end
 
 ----------------------------------------------------------------
@@ -1127,6 +1261,10 @@ SlashCmdList["BENCH"] = function(msg)
         mainFrame:Hide()
     else
         mainFrame:Show()
+        -- Force immediate live-raid check when opening
+        if WebLink_RefreshBenchLive then
+            WebLink_RefreshBenchLive()
+        end
         BenchTracker:SwitchTab(activeTab)
     end
 end
@@ -1162,6 +1300,19 @@ benchEventFrame:SetScript("OnEvent", function()
     elseif event == "RAID_ROSTER_UPDATE" then
         if mainFrame and mainFrame:IsVisible() and activeTab == "afk" then
             BenchTracker:UpdateAFKDisplay()
+        end
+        -- Auto-sync bench roster if session is active
+        if benchSessionActive then
+            if GetNumRaidMembers() == 0 then
+                BenchTracker:EndBenchSession()
+                if mainFrame and mainFrame.benchRaidButtonText then
+                    mainFrame.benchRaidButtonText:SetText("Bench this Raid")
+                    mainFrame.benchRaidButtonText:SetTextColor(1, 0.85, 0.5, 1)
+                    mainFrame.benchRaidButton:SetBackdropColor(0.4, 0.2, 0.6, 0.9)
+                end
+            else
+                BenchTracker:SendBenchRoster()
+            end
         end
 
     elseif event == "CHAT_MSG_GUILD" then
