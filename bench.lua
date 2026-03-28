@@ -186,7 +186,7 @@ function BenchTracker:CreateMainFrame()
     -- Scroll frame for AFK list
     local scrollFrame = CreateFrame("ScrollFrame", "BenchAfkScrollFrame", afkContent, "UIPanelScrollFrameTemplate")
     scrollFrame:SetPoint("TOPLEFT", afkContent, "TOPLEFT", 2, -14)
-    scrollFrame:SetPoint("BOTTOMRIGHT", afkContent, "BOTTOMRIGHT", -2, 26)
+    scrollFrame:SetPoint("BOTTOMRIGHT", afkContent, "BOTTOMRIGHT", -2, 50)
 
     local scrollChild = CreateFrame("Frame", "BenchAfkScrollChild", scrollFrame)
     scrollChild:SetWidth(245)
@@ -282,6 +282,7 @@ function BenchTracker:CreateMainFrame()
         end
     end)
     benchRaidBtn:SetScript("OnClick", function()
+        if not BenchTracker:IsOfficer() then return end
         if benchSessionActive then
             BenchTracker:EndBenchSession()
             benchRaidBtnText:SetText("Bench this Raid")
@@ -733,6 +734,10 @@ function BenchTracker:SendBenchRoster()
 end
 
 function BenchTracker:StartBenchSession()
+    if not BenchTracker:IsOfficer() then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFFF0000BenchTracker: Only officers can start bench sessions.|r")
+        return
+    end
     if GetNumRaidMembers() == 0 then
         DEFAULT_CHAT_FRAME:AddMessage("|cFFFF0000BenchTracker: You must be in a raid to start a bench session.|r")
         return

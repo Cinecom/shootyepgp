@@ -1141,6 +1141,10 @@ function sepgp:addonComms(prefix,message,channel,sender)
     elseif admin() and what == "EP" and who and amount and amount < 0 then
       -- Log EP penalties for OTHER players
       msg = string.format(L["%s EP Penalty to %s%s."],amount,who,"")
+    elseif admin() and what == "EP" and who and amount and amount > 0 then
+      -- Log positive EP awards for OTHER players (so DLL can track adjustments)
+      local old_ep = (new_ep or 0) - amount
+      msg = string.format("Awarded %d EP to %s. (Previous: %d, New: %d)",amount,who,old_ep,math.max(0,new_ep or 0))
     elseif who == "ALL" and what == "DECAY" then
       msg = string.format(L["%s%% decay to EP and GP."],amount)
     elseif who == "RAID" and what == "AWARD" then
@@ -1495,9 +1499,9 @@ function sepgp:award_raid_ep(ep) -- awards ep to raid members in zone
       return
     end
     for i = 1, GetNumRaidMembers(true) do
-      local name, rank, subgroup, level, class, fileName, zone, online, isDead = GetRaidRosterInfo(i)
-      if level >= sepgp.VARS.minlevel then
-        self:givename_ep(name,ep)
+      local name = GetRaidRosterInfo(i)
+      if name then
+        self:givename_ep(name,ep,true)
       end
     end
     self:simpleSay(string.format(L["Giving %d ep to all raidmembers"],ep))
@@ -1518,7 +1522,7 @@ function sepgp:award_reserve_ep(ep) -- awards ep to reserve list
     end
     for i, reserve in ipairs(sepgp.reserves) do
       local name, class, rank, alt = unpack(reserve)
-      self:givename_ep(name,ep)
+      self:givename_ep(name,ep,true)
     end
     self:simpleSay(string.format(L["Giving %d ep to active reserves"],ep))
     self:addToLog(string.format(L["Giving %d ep to active reserves"],ep))
@@ -1530,7 +1534,7 @@ function sepgp:award_reserve_ep(ep) -- awards ep to reserve list
   end
 end
 
-function sepgp:givename_ep(getname,ep) -- awards ep to a single character
+function sepgp:givename_ep(getname,ep,silent) -- awards ep to a single character
   if not (admin()) then return end
   local postfix, alt = ""
   if (sepgp_altspool) then
@@ -1542,14 +1546,22 @@ function sepgp:givename_ep(getname,ep) -- awards ep to a single character
       postfix = string.format(L[", %s\'s Main."],alt)
     end
   end
-  local newep = ep + (self:get_ep_v3(getname) or 0) 
-  self:update_ep_v3(getname,newep) 
+  local newep = ep + (self:get_ep_v3(getname) or 0)
+  self:update_ep_v3(getname,newep)
   self:debugPrint(string.format(L["Giving %d ep to %s%s."],ep,getname,postfix))
+  if silent then return end -- raid-wide awards handle their own logging
+  local currentgp = self:get_gp_v3(getname) or sepgp.VARS.basegp
   if ep < 0 then -- inform admins and victim of penalties
     local msg = string.format(L["%s EP Penalty to %s%s."],ep,getname,postfix)
     self:adminSay(msg)
     self:addToLog(msg)
-    local currentgp = self:get_gp_v3(getname) or sepgp.VARS.basegp
+    local addonMsg = string.format("%s;%s;%s;%s;%s",getname,"EP",ep,math.max(0,newep),currentgp)
+    self:addonMessage(addonMsg,"GUILD")
+  else -- positive individual EP adjustments
+    local oldep = newep - ep
+    local msg = string.format("Awarded %d EP to %s%s. (Previous: %d, New: %d)",ep,getname,postfix,oldep,newep)
+    self:adminSay(msg)
+    self:addToLog(msg)
     local addonMsg = string.format("%s;%s;%s;%s;%s",getname,"EP",ep,math.max(0,newep),currentgp)
     self:addonMessage(addonMsg,"GUILD")
   end
