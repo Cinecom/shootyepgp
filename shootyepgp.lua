@@ -1140,7 +1140,8 @@ function sepgp:addonComms(prefix,message,channel,sender)
       msg = string.format(L["Awarding %d GP to %s%s. (Previous: %d, New: %d)"],amount,who,"",old_gp,math.max(sepgp.VARS.basegp,new_gp or 0))
     elseif admin() and what == "EP" and who and amount and amount < 0 then
       -- Log EP penalties for OTHER players
-      msg = string.format(L["%s EP Penalty to %s%s."],amount,who,"")
+      local old_ep = (new_ep or 0) - amount
+      msg = string.format("%d EP Penalty to %s. (Previous: %d, New: %d)",amount,who,old_ep,math.max(0,new_ep or 0))
     elseif admin() and what == "EP" and who and amount and amount > 0 then
       -- Log positive EP awards for OTHER players (so DLL can track adjustments)
       local old_ep = (new_ep or 0) - amount
@@ -1552,7 +1553,8 @@ function sepgp:givename_ep(getname,ep,silent) -- awards ep to a single character
   if silent then return end -- raid-wide awards handle their own logging
   local currentgp = self:get_gp_v3(getname) or sepgp.VARS.basegp
   if ep < 0 then -- inform admins and victim of penalties
-    local msg = string.format(L["%s EP Penalty to %s%s."],ep,getname,postfix)
+    local oldep = newep - ep
+    local msg = string.format("%d EP Penalty to %s%s. (Previous: %d, New: %d)",ep,getname,postfix,oldep,math.max(0,newep))
     self:adminSay(msg)
     self:addToLog(msg)
     local addonMsg = string.format("%s;%s;%s;%s;%s",getname,"EP",ep,math.max(0,newep),currentgp)
