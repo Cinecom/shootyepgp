@@ -744,6 +744,15 @@ function BenchTracker:StartBenchSession()
     end
     benchSessionActive = true
     BenchTracker:SendBenchRoster()
+
+    -- Announce bench session to guild + raid warning
+    local url = "https://errorguild.com/raids"
+    if WEBLINK_RAID_EVENT_ID and WEBLINK_RAID_EVENT_ID ~= "" then
+        url = "https://errorguild.com/raids/" .. WEBLINK_RAID_EVENT_ID
+    end
+    local msg = "BENCH SESSION STARTED. SIGN HERE: " .. url
+    SendChatMessage(msg, "RAID_WARNING")
+
     DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00BenchTracker: Bench session started! Roster synced to website.|r")
 end
 

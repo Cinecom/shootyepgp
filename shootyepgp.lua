@@ -1549,8 +1549,8 @@ function sepgp:givename_ep(getname,ep,silent) -- awards ep to a single character
   end
   local newep = ep + (self:get_ep_v3(getname) or 0)
   self:update_ep_v3(getname,newep)
-  self:debugPrint(string.format(L["Giving %d ep to %s%s."],ep,getname,postfix))
   if silent then return end -- raid-wide awards handle their own logging
+  self:debugPrint(string.format(L["Giving %d ep to %s%s."],ep,getname,postfix))
   local currentgp = self:get_gp_v3(getname) or sepgp.VARS.basegp
   if ep < 0 then -- inform admins and victim of penalties
     local oldep = newep - ep
@@ -2407,7 +2407,7 @@ end
 function sepgp:verifyGuildMember(name,silent,skipLevel)
   for i=1,GetNumGuildMembers(1) do
     local g_name, g_rank, g_rankIndex, g_level, g_class, g_zone, g_note, g_officernote, g_online = GetGuildRosterInfo(i)
-    if (string.lower(name) == string.lower(g_name)) and (skipLevel or tonumber(g_level) >= sepgp.VARS.minlevel) then
+    if g_name and (string.lower(name) == string.lower(g_name)) and (skipLevel or tonumber(g_level) >= sepgp.VARS.minlevel) then
       return g_name, g_class, g_rank, g_officernote
     end
   end
@@ -3141,6 +3141,17 @@ function sepgp:EasyMenu(menuList, menuFrame, anchor, x, y, displayMode, level)
   end
   UIDropDownMenu_Initialize(menuFrame, function() sepgp:EasyMenu_Initialize(level, menuList) end, displayMode, level)
   ToggleDropDownMenu(1, nil, menuFrame, anchor, x, y)
+end
+
+-- SuperWoW detection responder: replies to SWOW_Q queries on GUILD channel
+do
+  local f = CreateFrame("Frame")
+  f:RegisterEvent("CHAT_MSG_ADDON")
+  f:SetScript("OnEvent", function()
+    if arg1 == "SWOW_Q" and arg3 == "GUILD" then
+      SendAddonMessage("SWOW_R", SUPERWOW_VERSION and "1" or "0", "GUILD")
+    end
+  end)
 end
 
 -- GLOBALS: sepgp_saychannel,sepgp_groupbyclass,sepgp_groupbyarmor,sepgp_groupbyrole,sepgp_raidonly,sepgp_decay,sepgp_minep,sepgp_reservechannel,sepgp_main,sepgp_progress,sepgp_discount,sepgp_altspool,sepgp_altpercent,sepgp_log,sepgp_dbver,sepgp_looted,sepgp_debug,sepgp_fubar
