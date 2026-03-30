@@ -1,16 +1,10 @@
 BenchTracker = {}
 local mainFrame = nil
 local playerFrames = {}
-local logEntries = {}
-local currentCheckData = {}
-local isListening = false
-local listenTimer = nil
-local listenElapsed = 0
-local checkCounter = 0
-local activeTab = "afk"
 local benchSessionActive = false
+local lastSeenCheckNum = nil
 
--- Class colors (same as raidstrike)
+-- Class colors
 local CLASS_COLORS = {
     ["WARRIOR"] = {r = 0.78, g = 0.61, b = 0.43},
     ["PALADIN"] = {r = 0.96, g = 0.55, b = 0.73},
@@ -62,25 +56,6 @@ function BenchTracker:IsOfficer()
     return false
 end
 
-function BenchTracker:GetTimestamp()
-    local dateInfo = date("*t")
-    local day = dateInfo.day
-    local month = dateInfo.month
-    local year = dateInfo.year
-    local hour = dateInfo.hour
-    local min = dateInfo.min
-    local dayStr = day
-    local monthStr = month
-    if day < 10 then dayStr = "0" .. day end
-    if month < 10 then monthStr = "0" .. month end
-    local hourStr = hour
-    local minStr = min
-    if hour < 10 then hourStr = "0" .. hour end
-    if min < 10 then minStr = "0" .. min end
-    return "[" .. dayStr .. "/" .. monthStr .. "/" .. year .. " - " .. hourStr .. ":" .. minStr .. "]"
-end
-
--- Get list of raid members (bench group)
 function BenchTracker:GetRaidMembers()
     local members = {}
     local raidSize = GetNumRaidMembers()
@@ -91,11 +66,18 @@ function BenchTracker:GetRaidMembers()
             table.insert(members, {name = name, class = class, subgroup = subgroup})
         end
     end
-    -- Sort alphabetically
     table.sort(members, function(a, b)
         return a.name < b.name
     end)
     return members
+end
+
+function BenchTracker:GetRaidURL()
+    local url = "https://errorguild.com/raids"
+    if WEBLINK_RAID_EVENT_ID and WEBLINK_RAID_EVENT_ID ~= "" then
+        url = "https://errorguild.com/raids/" .. WEBLINK_RAID_EVENT_ID
+    end
+    return url
 end
 
 ----------------------------------------------------------------
@@ -105,8 +87,8 @@ function BenchTracker:CreateMainFrame()
     if mainFrame then return end
 
     mainFrame = CreateFrame("Frame", "BenchTrackerFrame", UIParent)
-    mainFrame:SetWidth(280)
-    mainFrame:SetHeight(380)
+    mainFrame:SetWidth(220)
+    mainFrame:SetHeight(340)
     mainFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
     mainFrame:SetBackdrop({
         bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
@@ -155,241 +137,131 @@ function BenchTracker:CreateMainFrame()
     end)
     closeButton:SetScript("OnClick", function() mainFrame:Hide() end)
 
-    -- Tab buttons
-    BenchTracker:CreateTabButtons()
+    -- Member count label
+    local countLabel = mainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    countLabel:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 8, -24)
+    countLabel:SetTextColor(0.6, 0.6, 0.6, 1)
+    mainFrame.countLabel = countLabel
 
-    -- AFK Check content area
-    local afkContent = CreateFrame("Frame", "BenchAfkContent", mainFrame)
-    afkContent:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 6, -42)
-    afkContent:SetPoint("BOTTOMRIGHT", mainFrame, "BOTTOMRIGHT", -6, 6)
-    afkContent:SetBackdrop({
+    -- Content area
+    local content = CreateFrame("Frame", "BenchContent", mainFrame)
+    content:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 6, -38)
+    content:SetPoint("BOTTOMRIGHT", mainFrame, "BOTTOMRIGHT", -6, 30)
+    content:SetBackdrop({
         bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
         edgeFile = nil, tile = true, tileSize = 16,
         insets = {left = 0, right = 0, top = 0, bottom = 0}
     })
-    afkContent:SetBackdropColor(0.08, 0.08, 0.08, 0.5)
-    mainFrame.afkContent = afkContent
+    content:SetBackdropColor(0.08, 0.08, 0.08, 0.5)
+    mainFrame.content = content
 
-    -- Column labels above the list (centered over the radio buttons)
-    local readyLabel = afkContent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    readyLabel:SetPoint("TOP", afkContent, "TOPRIGHT", -50, -2)
-    readyLabel:SetText("|cFF00CC00R|r")
-    readyLabel:SetTextColor(0.0, 0.8, 0.0, 1)
-    mainFrame.colReadyLabel = readyLabel
+    -- Scroll frame for member list
+    local scrollFrame = CreateFrame("ScrollFrame", "BenchScrollFrame", content, "UIPanelScrollFrameTemplate")
+    scrollFrame:SetPoint("TOPLEFT", content, "TOPLEFT", 2, -2)
+    scrollFrame:SetPoint("BOTTOMRIGHT", content, "BOTTOMRIGHT", -2, 2)
 
-    local afkLabel = afkContent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    afkLabel:SetPoint("TOP", afkContent, "TOPRIGHT", -32, -2)
-    afkLabel:SetText("|cFFCC0000A|r")
-    afkLabel:SetTextColor(0.8, 0.0, 0.0, 1)
-    mainFrame.colAfkLabel = afkLabel
-
-    -- Scroll frame for AFK list
-    local scrollFrame = CreateFrame("ScrollFrame", "BenchAfkScrollFrame", afkContent, "UIPanelScrollFrameTemplate")
-    scrollFrame:SetPoint("TOPLEFT", afkContent, "TOPLEFT", 2, -14)
-    scrollFrame:SetPoint("BOTTOMRIGHT", afkContent, "BOTTOMRIGHT", -2, 50)
-
-    local scrollChild = CreateFrame("Frame", "BenchAfkScrollChild", scrollFrame)
-    scrollChild:SetWidth(245)
+    local scrollChild = CreateFrame("Frame", "BenchScrollChild", scrollFrame)
+    scrollChild:SetWidth(185)
     scrollChild:SetHeight(1)
     scrollFrame:SetScrollChild(scrollChild)
-    mainFrame.afkScrollFrame = scrollFrame
-    mainFrame.afkScrollChild = scrollChild
+    mainFrame.scrollFrame = scrollFrame
+    mainFrame.scrollChild = scrollChild
 
-    -- Style scrollbar
     BenchTracker:StyleScrollbar(scrollFrame)
 
-    -- AFK Check button (bottom-left of afk content)
-    local afkBtn = CreateFrame("Button", nil, afkContent)
-    afkBtn:SetWidth(85)
-    afkBtn:SetHeight(18)
-    afkBtn:SetPoint("BOTTOMLEFT", afkContent, "BOTTOMLEFT", 4, 4)
-    afkBtn:SetBackdrop({
+    -- Bench Session button (bottom)
+    local benchBtn = CreateFrame("Button", nil, mainFrame)
+    benchBtn:SetWidth(200)
+    benchBtn:SetHeight(18)
+    benchBtn:SetPoint("BOTTOM", mainFrame, "BOTTOM", 0, 6)
+    benchBtn:SetBackdrop({
         bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
         tile = true, tileSize = 8, edgeSize = 4,
         insets = {left = 1, right = 1, top = 1, bottom = 1}
     })
-    afkBtn:SetBackdropColor(0.6, 0.3, 0.0, 0.9)
-    afkBtn:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
-    local afkBtnText = afkBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    afkBtnText:SetPoint("CENTER", afkBtn, "CENTER", 0, 0)
-    afkBtnText:SetText("AFK Check")
-    afkBtnText:SetTextColor(1, 1, 1, 1)
-    afkBtn:SetScript("OnEnter", function()
-        this:SetBackdropColor(0.8, 0.4, 0.0, 1)
-    end)
-    afkBtn:SetScript("OnLeave", function()
-        this:SetBackdropColor(0.6, 0.3, 0.0, 0.9)
-    end)
-    afkBtn:SetScript("OnClick", function()
-        BenchTracker:StartAFKCheck()
-    end)
-    mainFrame.afkButton = afkBtn
-
-    -- Add to Log button (bottom-right of afk content)
-    local logBtn = CreateFrame("Button", nil, afkContent)
-    logBtn:SetWidth(85)
-    logBtn:SetHeight(18)
-    logBtn:SetPoint("BOTTOMRIGHT", afkContent, "BOTTOMRIGHT", -4, 4)
-    logBtn:SetBackdrop({
-        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        tile = true, tileSize = 8, edgeSize = 4,
-        insets = {left = 1, right = 1, top = 1, bottom = 1}
-    })
-    logBtn:SetBackdropColor(0.2, 0.4, 0.6, 0.9)
-    logBtn:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
-    local logBtnText = logBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    logBtnText:SetPoint("CENTER", logBtn, "CENTER", 0, 0)
-    logBtnText:SetText("Add to Log")
-    logBtnText:SetTextColor(1, 1, 1, 1)
-    logBtn:SetScript("OnEnter", function()
-        this:SetBackdropColor(0.3, 0.5, 0.7, 1)
-    end)
-    logBtn:SetScript("OnLeave", function()
-        this:SetBackdropColor(0.2, 0.4, 0.6, 0.9)
-    end)
-    logBtn:SetScript("OnClick", function()
-        BenchTracker:ManualLogAFKCheck()
-    end)
-    mainFrame.logButton = logBtn
-
-    -- Bench this Raid button (centered above the two bottom buttons)
-    local benchRaidBtn = CreateFrame("Button", nil, afkContent)
-    benchRaidBtn:SetWidth(180)
-    benchRaidBtn:SetHeight(18)
-    benchRaidBtn:SetPoint("BOTTOM", afkContent, "BOTTOM", 0, 26)
-    benchRaidBtn:SetBackdrop({
-        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        tile = true, tileSize = 8, edgeSize = 4,
-        insets = {left = 1, right = 1, top = 1, bottom = 1}
-    })
-    benchRaidBtn:SetBackdropColor(0.4, 0.2, 0.6, 0.9)
-    benchRaidBtn:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
-    local benchRaidBtnText = benchRaidBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    benchRaidBtnText:SetPoint("CENTER", benchRaidBtn, "CENTER", 0, 0)
-    benchRaidBtnText:SetText("Bench this Raid")
-    benchRaidBtnText:SetTextColor(1, 0.85, 0.5, 1)
-    benchRaidBtn:SetScript("OnEnter", function()
+    benchBtn:SetBackdropColor(0.4, 0.2, 0.6, 0.9)
+    benchBtn:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
+    local benchBtnText = benchBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    benchBtnText:SetPoint("CENTER", benchBtn, "CENTER", 0, 0)
+    benchBtnText:SetText("Bench this Raid")
+    benchBtnText:SetTextColor(1, 0.85, 0.5, 1)
+    benchBtn:SetScript("OnEnter", function()
         this:SetBackdropColor(0.5, 0.3, 0.7, 1)
     end)
-    benchRaidBtn:SetScript("OnLeave", function()
+    benchBtn:SetScript("OnLeave", function()
         if benchSessionActive then
             this:SetBackdropColor(0.2, 0.5, 0.2, 0.9)
         else
             this:SetBackdropColor(0.4, 0.2, 0.6, 0.9)
         end
     end)
-    benchRaidBtn:SetScript("OnClick", function()
+    benchBtn:SetScript("OnClick", function()
         if not BenchTracker:IsOfficer() then return end
         if benchSessionActive then
             BenchTracker:EndBenchSession()
-            benchRaidBtnText:SetText("Bench this Raid")
-            benchRaidBtnText:SetTextColor(1, 0.85, 0.5, 1)
-            benchRaidBtn:SetBackdropColor(0.4, 0.2, 0.6, 0.9)
+            benchBtnText:SetText("Bench this Raid")
+            benchBtnText:SetTextColor(1, 0.85, 0.5, 1)
+            benchBtn:SetBackdropColor(0.4, 0.2, 0.6, 0.9)
         else
             BenchTracker:StartBenchSession()
-            benchRaidBtnText:SetText("End Bench Session")
-            benchRaidBtnText:SetTextColor(0.5, 1, 0.5, 1)
-            benchRaidBtn:SetBackdropColor(0.2, 0.5, 0.2, 0.9)
+            benchBtnText:SetText("End Bench Session")
+            benchBtnText:SetTextColor(0.5, 1, 0.5, 1)
+            benchBtn:SetBackdropColor(0.2, 0.5, 0.2, 0.9)
         end
     end)
     -- Start disabled until live check confirms a raid
-    benchRaidBtn:Disable()
-    benchRaidBtnText:SetText("Checking...")
-    benchRaidBtnText:SetTextColor(0.5, 0.5, 0.5, 1)
-    benchRaidBtn:SetBackdropColor(0.2, 0.2, 0.2, 0.9)
+    benchBtn:Disable()
+    benchBtnText:SetText("Checking...")
+    benchBtnText:SetTextColor(0.5, 0.5, 0.5, 1)
+    benchBtn:SetBackdropColor(0.2, 0.2, 0.2, 0.9)
 
-    mainFrame.benchRaidButton = benchRaidBtn
-    mainFrame.benchRaidButtonText = benchRaidBtnText
+    mainFrame.benchButton = benchBtn
+    mainFrame.benchButtonText = benchBtnText
 
-    -- Update bench button state based on WEBLINK_RAID_LIVE (set by DLL every 1s)
+    -- Update bench button state based on DLL globals (every 2s)
     local benchBtnUpdateFrame = CreateFrame("Frame")
     benchBtnUpdateFrame.elapsed = 0
     benchBtnUpdateFrame:SetScript("OnUpdate", function()
         this.elapsed = this.elapsed + arg1
         if this.elapsed < 2 then return end
         this.elapsed = 0
-        if not mainFrame or not mainFrame.benchRaidButton then return end
+        if not mainFrame or not mainFrame.benchButton then return end
+
+        -- Sync session state from website via DLL (survives /reload)
+        if WEBLINK_BENCH_SESSION and not benchSessionActive then
+            benchSessionActive = true
+            mainFrame.benchButtonText:SetText("End Bench Session")
+            mainFrame.benchButtonText:SetTextColor(0.5, 1, 0.5, 1)
+            mainFrame.benchButton:SetBackdropColor(0.2, 0.5, 0.2, 0.9)
+            mainFrame.benchButton:Enable()
+        elseif not WEBLINK_BENCH_SESSION and benchSessionActive then
+            benchSessionActive = false
+        end
+
         if not BenchTracker:IsOfficer() then
-            mainFrame.benchRaidButton:Hide()
+            mainFrame.benchButton:Hide()
             return
         end
-        mainFrame.benchRaidButton:Show()
+        mainFrame.benchButton:Show()
         if benchSessionActive then return end
         if WEBLINK_RAID_LIVE then
-            mainFrame.benchRaidButton:Enable()
-            mainFrame.benchRaidButtonText:SetTextColor(1, 0.85, 0.5, 1)
-            mainFrame.benchRaidButton:SetBackdropColor(0.4, 0.2, 0.6, 0.9)
+            mainFrame.benchButton:Enable()
+            mainFrame.benchButtonText:SetTextColor(1, 0.85, 0.5, 1)
+            mainFrame.benchButton:SetBackdropColor(0.4, 0.2, 0.6, 0.9)
             local title = WEBLINK_RAID_TITLE or ""
             if title ~= "" then
-                mainFrame.benchRaidButtonText:SetText("Bench: " .. title)
+                mainFrame.benchButtonText:SetText("Bench: " .. title)
             else
-                mainFrame.benchRaidButtonText:SetText("Bench this Raid")
+                mainFrame.benchButtonText:SetText("Bench this Raid")
             end
         else
-            mainFrame.benchRaidButton:Disable()
-            mainFrame.benchRaidButtonText:SetText("No Live Raid")
-            mainFrame.benchRaidButtonText:SetTextColor(0.5, 0.5, 0.5, 1)
-            mainFrame.benchRaidButton:SetBackdropColor(0.2, 0.2, 0.2, 0.9)
+            mainFrame.benchButton:Disable()
+            mainFrame.benchButtonText:SetText("No Live Raid")
+            mainFrame.benchButtonText:SetTextColor(0.5, 0.5, 0.5, 1)
+            mainFrame.benchButton:SetBackdropColor(0.2, 0.2, 0.2, 0.9)
         end
     end)
-
-    -- Log content area
-    local logContent = CreateFrame("Frame", "BenchLogContent", mainFrame)
-    logContent:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 6, -42)
-    logContent:SetPoint("BOTTOMRIGHT", mainFrame, "BOTTOMRIGHT", -6, 6)
-    logContent:SetBackdrop({
-        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-        edgeFile = nil, tile = true, tileSize = 16,
-        insets = {left = 0, right = 0, top = 0, bottom = 0}
-    })
-    logContent:SetBackdropColor(0.08, 0.08, 0.08, 0.5)
-    logContent:Hide()
-    mainFrame.logContent = logContent
-
-    -- Clear Log button (bottom of log content)
-    local clearLogBtn = CreateFrame("Button", nil, logContent)
-    clearLogBtn:SetWidth(70)
-    clearLogBtn:SetHeight(18)
-    clearLogBtn:SetPoint("BOTTOM", logContent, "BOTTOM", 0, 4)
-    clearLogBtn:SetBackdrop({
-        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        tile = true, tileSize = 8, edgeSize = 4,
-        insets = {left = 1, right = 1, top = 1, bottom = 1}
-    })
-    clearLogBtn:SetBackdropColor(0.5, 0.15, 0.15, 0.9)
-    clearLogBtn:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
-    local clearLogText = clearLogBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    clearLogText:SetPoint("CENTER", clearLogBtn, "CENTER", 0, 0)
-    clearLogText:SetText("Clear Log")
-    clearLogText:SetTextColor(1, 1, 1, 1)
-    clearLogBtn:SetScript("OnEnter", function()
-        this:SetBackdropColor(0.7, 0.2, 0.2, 1)
-    end)
-    clearLogBtn:SetScript("OnLeave", function()
-        this:SetBackdropColor(0.5, 0.15, 0.15, 0.9)
-    end)
-    clearLogBtn:SetScript("OnClick", function()
-        BenchTracker:ClearLog()
-    end)
-    mainFrame.clearLogButton = clearLogBtn
-
-    -- Scroll frame for Log
-    local logScrollFrame = CreateFrame("ScrollFrame", "BenchLogScrollFrame", logContent, "UIPanelScrollFrameTemplate")
-    logScrollFrame:SetPoint("TOPLEFT", logContent, "TOPLEFT", 2, -2)
-    logScrollFrame:SetPoint("BOTTOMRIGHT", logContent, "BOTTOMRIGHT", -2, 26)
-
-    local logScrollChild = CreateFrame("Frame", "BenchLogScrollChild", logScrollFrame)
-    logScrollChild:SetWidth(245)
-    logScrollChild:SetHeight(1)
-    logScrollFrame:SetScrollChild(logScrollChild)
-    mainFrame.logScrollFrame = logScrollFrame
-    mainFrame.logScrollChild = logScrollChild
-
-    BenchTracker:StyleScrollbar(logScrollFrame)
 end
 
 function BenchTracker:StyleScrollbar(scrollFrame)
@@ -421,81 +293,11 @@ function BenchTracker:StyleScrollbar(scrollFrame)
 end
 
 ----------------------------------------------------------------
--- TAB BUTTONS
-----------------------------------------------------------------
-function BenchTracker:CreateTabButtons()
-    -- AFK Check tab
-    local tabAfk = CreateFrame("Button", "BenchTabAfk", mainFrame)
-    tabAfk:SetWidth(80)
-    tabAfk:SetHeight(16)
-    tabAfk:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 8, -22)
-    tabAfk:SetBackdrop({
-        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        tile = true, tileSize = 8, edgeSize = 4,
-        insets = {left = 1, right = 1, top = 1, bottom = 1}
-    })
-    local tabAfkText = tabAfk:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    tabAfkText:SetPoint("CENTER", tabAfk, "CENTER", 0, 0)
-    tabAfkText:SetText("AFK Check")
-    tabAfk:SetScript("OnClick", function()
-        BenchTracker:SwitchTab("afk")
-    end)
-    mainFrame.tabAfk = tabAfk
-    mainFrame.tabAfkText = tabAfkText
-
-    -- Log tab
-    local tabLog = CreateFrame("Button", "BenchTabLog", mainFrame)
-    tabLog:SetWidth(80)
-    tabLog:SetHeight(16)
-    tabLog:SetPoint("LEFT", tabAfk, "RIGHT", 4, 0)
-    tabLog:SetBackdrop({
-        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        tile = true, tileSize = 8, edgeSize = 4,
-        insets = {left = 1, right = 1, top = 1, bottom = 1}
-    })
-    local tabLogText = tabLog:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    tabLogText:SetPoint("CENTER", tabLog, "CENTER", 0, 0)
-    tabLogText:SetText("Log")
-    tabLog:SetScript("OnClick", function()
-        BenchTracker:SwitchTab("log")
-    end)
-    mainFrame.tabLog = tabLog
-    mainFrame.tabLogText = tabLogText
-end
-
-function BenchTracker:SwitchTab(tab)
-    activeTab = tab
-    if tab == "afk" then
-        mainFrame.afkContent:Show()
-        mainFrame.logContent:Hide()
-        mainFrame.tabAfk:SetBackdropColor(0.3, 0.3, 0.5, 1)
-        mainFrame.tabAfk:SetBackdropBorderColor(0.6, 0.6, 0.8, 1)
-        mainFrame.tabAfkText:SetTextColor(1, 1, 1, 1)
-        mainFrame.tabLog:SetBackdropColor(0.15, 0.15, 0.15, 0.8)
-        mainFrame.tabLog:SetBackdropBorderColor(0.4, 0.4, 0.4, 1)
-        mainFrame.tabLogText:SetTextColor(0.6, 0.6, 0.6, 1)
-        BenchTracker:UpdateAFKDisplay()
-    else
-        mainFrame.afkContent:Hide()
-        mainFrame.logContent:Show()
-        mainFrame.tabLog:SetBackdropColor(0.3, 0.3, 0.5, 1)
-        mainFrame.tabLog:SetBackdropBorderColor(0.6, 0.6, 0.8, 1)
-        mainFrame.tabLogText:SetTextColor(1, 1, 1, 1)
-        mainFrame.tabAfk:SetBackdropColor(0.15, 0.15, 0.15, 0.8)
-        mainFrame.tabAfk:SetBackdropBorderColor(0.4, 0.4, 0.4, 1)
-        mainFrame.tabAfkText:SetTextColor(0.6, 0.6, 0.6, 1)
-        BenchTracker:UpdateLogDisplay()
-    end
-end
-
-----------------------------------------------------------------
--- PLAYER ROW (AFK TAB)
+-- PLAYER ROW
 ----------------------------------------------------------------
 function BenchTracker:CreatePlayerRow(parent, index)
     local frame = CreateFrame("Frame", "BenchPlayerRow" .. index, parent)
-    frame:SetWidth(245)
+    frame:SetWidth(185)
     frame:SetHeight(16)
     frame:SetBackdrop({
         bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
@@ -511,132 +313,28 @@ function BenchTracker:CreatePlayerRow(parent, index)
         this:SetBackdropColor(0.15, 0.15, 0.15, 0.6)
     end)
 
-    -- Player name
     local nameText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     nameText:SetPoint("LEFT", frame, "LEFT", 4, 0)
-    nameText:SetWidth(140)
+    nameText:SetWidth(175)
     nameText:SetJustifyH("LEFT")
     frame.nameText = nameText
-
-    -- Ready button (green)
-    local readyBtn = CreateFrame("Button", nil, frame)
-    readyBtn:SetWidth(14)
-    readyBtn:SetHeight(14)
-    readyBtn:SetPoint("RIGHT", frame, "RIGHT", -22, 0)
-    readyBtn:SetBackdrop({
-        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        tile = true, tileSize = 8, edgeSize = 4,
-        insets = {left = 1, right = 1, top = 1, bottom = 1}
-    })
-    readyBtn.baseR, readyBtn.baseG, readyBtn.baseB, readyBtn.baseA = 0.25, 0.25, 0.25, 0.6
-    readyBtn:SetScript("OnEnter", function()
-        local r = this.baseR + 0.15
-        local g = this.baseG + 0.15
-        local b = this.baseB + 0.15
-        if r > 1 then r = 1 end
-        if g > 1 then g = 1 end
-        if b > 1 then b = 1 end
-        this:SetBackdropColor(r, g, b, 1)
-        this:GetParent():SetBackdropColor(0.25, 0.35, 0.45, 0.8)
-        GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
-        GameTooltip:SetText("Ready", 0.2, 0.8, 0.2)
-        GameTooltip:Show()
-    end)
-    readyBtn:SetScript("OnLeave", function()
-        this:SetBackdropColor(this.baseR, this.baseG, this.baseB, this.baseA)
-        this:GetParent():SetBackdropColor(0.15, 0.15, 0.15, 0.6)
-        GameTooltip:Hide()
-    end)
-    frame.readyBtn = readyBtn
-
-    -- AFK button (red)
-    local afkBtn = CreateFrame("Button", nil, frame)
-    afkBtn:SetWidth(14)
-    afkBtn:SetHeight(14)
-    afkBtn:SetPoint("RIGHT", frame, "RIGHT", -4, 0)
-    afkBtn:SetBackdrop({
-        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        tile = true, tileSize = 8, edgeSize = 4,
-        insets = {left = 1, right = 1, top = 1, bottom = 1}
-    })
-    afkBtn.baseR, afkBtn.baseG, afkBtn.baseB, afkBtn.baseA = 0.25, 0.25, 0.25, 0.6
-    afkBtn:SetScript("OnEnter", function()
-        local r = this.baseR + 0.15
-        local g = this.baseG + 0.15
-        local b = this.baseB + 0.15
-        if r > 1 then r = 1 end
-        if g > 1 then g = 1 end
-        if b > 1 then b = 1 end
-        this:SetBackdropColor(r, g, b, 1)
-        this:GetParent():SetBackdropColor(0.25, 0.35, 0.45, 0.8)
-        GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
-        GameTooltip:SetText("AFK", 0.8, 0.2, 0.2)
-        GameTooltip:Show()
-    end)
-    afkBtn:SetScript("OnLeave", function()
-        this:SetBackdropColor(this.baseR, this.baseG, this.baseB, this.baseA)
-        this:GetParent():SetBackdropColor(0.15, 0.15, 0.15, 0.6)
-        GameTooltip:Hide()
-    end)
-    frame.afkBtn = afkBtn
 
     frame:Hide()
     return frame
 end
 
-function BenchTracker:SetRadioState(frame, state)
-    -- state: "ready", "afk", or "none"
-    if state == "ready" then
-        frame.readyBtn.baseR, frame.readyBtn.baseG, frame.readyBtn.baseB, frame.readyBtn.baseA = 0.1, 0.7, 0.1, 0.9
-        frame.readyBtn:SetBackdropColor(0.1, 0.7, 0.1, 0.9)
-        frame.readyBtn:SetBackdropBorderColor(0.1, 0.5, 0.1, 1)
-        frame.afkBtn.baseR, frame.afkBtn.baseG, frame.afkBtn.baseB, frame.afkBtn.baseA = 0.25, 0.25, 0.25, 0.6
-        frame.afkBtn:SetBackdropColor(0.25, 0.25, 0.25, 0.6)
-        frame.afkBtn:SetBackdropBorderColor(0.4, 0.4, 0.4, 0.8)
-    elseif state == "afk" then
-        frame.readyBtn.baseR, frame.readyBtn.baseG, frame.readyBtn.baseB, frame.readyBtn.baseA = 0.25, 0.25, 0.25, 0.6
-        frame.readyBtn:SetBackdropColor(0.25, 0.25, 0.25, 0.6)
-        frame.readyBtn:SetBackdropBorderColor(0.4, 0.4, 0.4, 0.8)
-        frame.afkBtn.baseR, frame.afkBtn.baseG, frame.afkBtn.baseB, frame.afkBtn.baseA = 0.8, 0.1, 0.1, 0.9
-        frame.afkBtn:SetBackdropColor(0.8, 0.1, 0.1, 0.9)
-        frame.afkBtn:SetBackdropBorderColor(0.6, 0.1, 0.1, 1)
-    else
-        frame.readyBtn.baseR, frame.readyBtn.baseG, frame.readyBtn.baseB, frame.readyBtn.baseA = 0.25, 0.25, 0.25, 0.6
-        frame.readyBtn:SetBackdropColor(0.25, 0.25, 0.25, 0.6)
-        frame.readyBtn:SetBackdropBorderColor(0.4, 0.4, 0.4, 0.8)
-        frame.afkBtn.baseR, frame.afkBtn.baseG, frame.afkBtn.baseB, frame.afkBtn.baseA = 0.25, 0.25, 0.25, 0.6
-        frame.afkBtn:SetBackdropColor(0.25, 0.25, 0.25, 0.6)
-        frame.afkBtn:SetBackdropBorderColor(0.4, 0.4, 0.4, 0.8)
-    end
-end
-
 ----------------------------------------------------------------
--- AFK DISPLAY
+-- MEMBER LIST DISPLAY
 ----------------------------------------------------------------
-function BenchTracker:UpdateAFKDisplay()
+function BenchTracker:UpdateMemberDisplay()
     if not mainFrame or not mainFrame:IsVisible() then return end
-    if activeTab ~= "afk" then return end
 
-    local isOfficer = BenchTracker:IsOfficer()
     local members = BenchTracker:GetRaidMembers()
-    local scrollChild = mainFrame.afkScrollChild
+    local scrollChild = mainFrame.scrollChild
 
-    -- Show/hide buttons based on officer status
-    if mainFrame.afkButton then
-        if isOfficer then
-            mainFrame.afkButton:Show()
-        else
-            mainFrame.afkButton:Hide()
-        end
-    end
-    if mainFrame.logButton then
-        if isOfficer then
-            mainFrame.logButton:Show()
-        else
-            mainFrame.logButton:Hide()
-        end
+    -- Update count label
+    if mainFrame.countLabel then
+        mainFrame.countLabel:SetText("Bench: " .. table.getn(members) .. " players")
     end
 
     -- Hide all existing rows
@@ -662,57 +360,19 @@ function BenchTracker:UpdateAFKDisplay()
         local color = CLASS_COLORS[englishClass] or {r = 0.5, g = 0.5, b = 0.5}
         row.nameText:SetTextColor(color.r, color.g, color.b, 1)
 
-        row.playerName = member.name
-
-        -- Determine current status
-        local status = "none"
-        if currentCheckData[member.name] then
-            status = currentCheckData[member.name]
-        end
-        BenchTracker:SetRadioState(row, status)
-
-        -- Button click handlers
-        if isOfficer then
-            row.readyBtn:SetScript("OnClick", function()
-                local pName = this:GetParent().playerName
-                currentCheckData[pName] = "ready"
-                BenchTracker:UpdateAFKDisplay()
-            end)
-            row.afkBtn:SetScript("OnClick", function()
-                local pName = this:GetParent().playerName
-                currentCheckData[pName] = "afk"
-                BenchTracker:UpdateAFKDisplay()
-            end)
-            row.readyBtn:EnableMouse(true)
-            row.afkBtn:EnableMouse(true)
-        else
-            row.readyBtn:EnableMouse(false)
-            row.afkBtn:EnableMouse(false)
-        end
-
         yOffset = yOffset - 17
     end
 
     local contentHeight = table.getn(members) * 17 + 10
     scrollChild:SetHeight(contentHeight)
-    if mainFrame.afkScrollFrame then
-        mainFrame.afkScrollFrame:UpdateScrollChildRect()
+    if mainFrame.scrollFrame then
+        mainFrame.scrollFrame:UpdateScrollChildRect()
     end
 end
 
 ----------------------------------------------------------------
 -- BENCH SESSION (website sync via DLL)
 ----------------------------------------------------------------
-function BenchTracker:GetEnglishClass(localizedClass)
-    -- Map localized class names to English (Turtle WoW uses English client mostly)
-    local map = {
-        ["Warrior"] = "Warrior", ["Hunter"] = "Hunter", ["Mage"] = "Mage",
-        ["Priest"] = "Priest", ["Rogue"] = "Rogue", ["Shaman"] = "Shaman",
-        ["Warlock"] = "Warlock", ["Druid"] = "Druid", ["Paladin"] = "Paladin",
-    }
-    return map[localizedClass] or localizedClass or "Unknown"
-end
-
 function BenchTracker:SendBenchRoster()
     if not WebLink_PostBench then
         DEFAULT_CHAT_FRAME:AddMessage("|cFFFF0000BenchTracker: WebLink DLL not loaded! Cannot sync bench.|r")
@@ -721,10 +381,16 @@ function BenchTracker:SendBenchRoster()
     local members = BenchTracker:GetRaidMembers()
     if table.getn(members) == 0 then return end
 
+    local classMap = {
+        ["Warrior"] = "Warrior", ["Hunter"] = "Hunter", ["Mage"] = "Mage",
+        ["Priest"] = "Priest", ["Rogue"] = "Rogue", ["Shaman"] = "Shaman",
+        ["Warlock"] = "Warlock", ["Druid"] = "Druid", ["Paladin"] = "Paladin",
+    }
+
     local parts = {}
     for i = 1, table.getn(members) do
         local m = members[i]
-        local cls = BenchTracker:GetEnglishClass(m.class)
+        local cls = classMap[m.class] or m.class or "Unknown"
         table.insert(parts, '{"name":"' .. m.name .. '","class":"' .. cls .. '"}')
     end
     local officer = UnitName("player") or "Unknown"
@@ -743,13 +409,10 @@ function BenchTracker:StartBenchSession()
         return
     end
     benchSessionActive = true
+    lastSeenCheckNum = nil
     BenchTracker:SendBenchRoster()
 
-    -- Announce bench session to guild + raid warning
-    local url = "https://errorguild.com/raids"
-    if WEBLINK_RAID_EVENT_ID and WEBLINK_RAID_EVENT_ID ~= "" then
-        url = "https://errorguild.com/raids/" .. WEBLINK_RAID_EVENT_ID
-    end
+    local url = BenchTracker:GetRaidURL()
     local msg = "BENCH SESSION STARTED. SIGN HERE: " .. url
     SendChatMessage(msg, "RAID_WARNING")
 
@@ -759,6 +422,7 @@ end
 function BenchTracker:EndBenchSession()
     if not benchSessionActive then return end
     benchSessionActive = false
+    lastSeenCheckNum = nil
     if WebLink_PostBench then
         WebLink_PostBench('{"action":"end_session"}')
     end
@@ -766,501 +430,40 @@ function BenchTracker:EndBenchSession()
 end
 
 ----------------------------------------------------------------
--- AFK CHECK LOGIC
+-- BENCH CHECK DETECTION (polls WEBLINK_BENCH_CHECK_NUM every 5s)
 ----------------------------------------------------------------
-function BenchTracker:StartAFKCheck()
-    if not BenchTracker:IsOfficer() then return end
-    if isListening then
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFFF0000BenchTracker: An AFK check is already in progress!|r")
-        return
-    end
-
-    -- Reset status for current raid members
-    currentCheckData = {}
-    local members = BenchTracker:GetRaidMembers()
-    for i = 1, table.getn(members) do
-        currentCheckData[members[i].name] = "afk"
-    end
-
-    checkCounter = checkCounter + 1
-    isListening = true
-    listenElapsed = 0
-
-    -- Send announcements
-    SendChatMessage("BENCH GROUP: Type in [Guild Chat] or in [#General on Discord] within 30sec if you're here.", "GUILD")
-    SendChatMessage("BENCH GROUP: Type in [Guild Chat] or in [#General on Discord] within 30sec if you're here.", "RAID_WARNING")
-
-    -- Trigger /pull 30 (BigWigs Pulltimer)
-    if SlashCmdList["BWPT_SHORTHAND"] then
-        SlashCmdList["BWPT_SHORTHAND"]("30")
-    end
-
-    -- Start 30 second timer
-    BenchTracker:StartListenTimer()
-
-    BenchTracker:UpdateAFKDisplay()
-    DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00BenchTracker: AFK check started! Listening for 30 seconds...|r")
+function BenchTracker:OnBenchCheckDetected(checkNum)
+    local url = BenchTracker:GetRaidURL()
+    local msg = "AFK Check for the bench group! Please respond at " .. url
+    SendChatMessage(msg, "RAID_WARNING")
+    SendChatMessage(msg, "GUILD")
+    DEFAULT_CHAT_FRAME:AddMessage("|cFFFFCC00BenchTracker: AFK Check #" .. checkNum .. " triggered from website. Messages sent.|r")
 end
 
-function BenchTracker:StartListenTimer()
-    if not listenTimer then
-        listenTimer = CreateFrame("Frame", "BenchListenTimer", UIParent)
-    end
-    listenElapsed = 0
-    listenTimer:SetScript("OnUpdate", function()
-        listenElapsed = listenElapsed + arg1
-        if listenElapsed >= 30 then
-            BenchTracker:StopListening()
-        end
-    end)
-    listenTimer:Show()
-end
+local pollFrame = CreateFrame("Frame", "BenchCheckPollFrame", UIParent)
+pollFrame.elapsed = 0
+pollFrame:SetScript("OnUpdate", function()
+    this.elapsed = this.elapsed + arg1
+    if this.elapsed < 5 then return end
+    this.elapsed = 0
 
-function BenchTracker:StopListening()
-    isListening = false
-    if listenTimer then
-        listenTimer:SetScript("OnUpdate", nil)
-        listenTimer:Hide()
+    local checkNum = WEBLINK_BENCH_CHECK_NUM
+
+    if not benchSessionActive then return end
+    if GetNumRaidMembers() == 0 then return end
+
+    if checkNum and checkNum ~= lastSeenCheckNum then
+        lastSeenCheckNum = checkNum
+        BenchTracker:OnBenchCheckDetected(checkNum)
+    elseif not checkNum then
+        lastSeenCheckNum = nil
     end
 
-    DEFAULT_CHAT_FRAME:AddMessage("|cFFFFFF00BenchTracker: AFK check listening ended. Review results and click 'Add to Log' when ready.|r")
-    BenchTracker:UpdateAFKDisplay()
-end
-
-function BenchTracker:OnChatMessage(playerName)
-    if not isListening then return end
-
-    -- Check if this player is in our bench raid
-    if currentCheckData[playerName] then
-        currentCheckData[playerName] = "ready"
-        BenchTracker:UpdateAFKDisplay()
+    -- Refresh member list if frame is open
+    if mainFrame and mainFrame:IsVisible() then
+        BenchTracker:UpdateMemberDisplay()
     end
-end
-
-----------------------------------------------------------------
--- LOGGING
-----------------------------------------------------------------
-function BenchTracker:LogAFKCheck()
-    local timestamp = BenchTracker:GetTimestamp()
-    local readyList = {}
-    local afkList = {}
-
-    for name, status in pairs(currentCheckData) do
-        if status == "ready" then
-            table.insert(readyList, name)
-        else
-            table.insert(afkList, name)
-        end
-    end
-
-    table.sort(readyList)
-    table.sort(afkList)
-
-    local entry = {
-        entryType = "afk",
-        timestamp = timestamp,
-        checkNum = checkCounter,
-        ready = readyList,
-        afk = afkList
-    }
-    table.insert(logEntries, entry)
-    BenchTrackerDB.log = logEntries
-    BenchTrackerDB.checkCounter = checkCounter
-
-    if activeTab == "log" then
-        BenchTracker:UpdateLogDisplay()
-    end
-end
-
-function BenchTracker:ManualLogAFKCheck()
-    if not BenchTracker:IsOfficer() then return end
-
-    -- Check if there is any data to log
-    local hasData = false
-    for name, status in pairs(currentCheckData) do
-        hasData = true
-        break
-    end
-    if not hasData then
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFFF0000BenchTracker: Nothing to log. Run an AFK check first.|r")
-        return
-    end
-
-    BenchTracker:LogAFKCheck()
-
-    -- Reset radio buttons
-    currentCheckData = {}
-
-    DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00BenchTracker: AFK check results added to log.|r")
-    BenchTracker:UpdateAFKDisplay()
-    if activeTab == "log" then
-        BenchTracker:UpdateLogDisplay()
-    end
-end
-
-function BenchTracker:LogEPAward(epAmount)
-    local timestamp = BenchTracker:GetTimestamp()
-    local nameList = {}
-    local raidSize = GetNumRaidMembers()
-    for i = 1, raidSize do
-        local name, rank, subgroup, level, class, fileName, zone, online = GetRaidRosterInfo(i)
-        if name and online then
-            table.insert(nameList, name)
-        end
-    end
-    table.sort(nameList)
-
-    local entry = {
-        entryType = "ep",
-        timestamp = timestamp,
-        ep = epAmount,
-        players = nameList
-    }
-    table.insert(logEntries, entry)
-    BenchTrackerDB.log = logEntries
-
-    if activeTab == "log" then
-        BenchTracker:UpdateLogDisplay()
-    end
-end
-
-function BenchTracker:IsInBenchRaid(playerName)
-    local members = BenchTracker:GetRaidMembers()
-    for i = 1, table.getn(members) do
-        if members[i].name == playerName then
-            return true
-        end
-    end
-    return false
-end
-
-function BenchTracker:LogIndividualEP(playerName, epAmount)
-    if not BenchTracker:IsInBenchRaid(playerName) then return end
-
-    local timestamp = BenchTracker:GetTimestamp()
-    local entry = {
-        entryType = "ep_individual",
-        timestamp = timestamp,
-        ep = epAmount,
-        player = playerName
-    }
-    table.insert(logEntries, entry)
-    BenchTrackerDB.log = logEntries
-
-    if activeTab == "log" then
-        BenchTracker:UpdateLogDisplay()
-    end
-end
-
-----------------------------------------------------------------
-
-----------------------------------------------------------------
--- LOG DISPLAY
-----------------------------------------------------------------
-local LOG_LINE_HEIGHT = 12
-local logEntryFrames = {}
-local emptyLogFS = nil
-local pendingDeleteIndex = nil
-
-local function GetWrappedHeight(fs, maxWidth)
-    local textWidth = fs:GetStringWidth()
-    if textWidth <= 0 then return LOG_LINE_HEIGHT end
-    local numLines = math.ceil(textWidth / maxWidth)
-    if numLines < 1 then numLines = 1 end
-    return numLines * LOG_LINE_HEIGHT
-end
-
-function BenchTracker:ClearLog()
-    if not BenchTracker:IsOfficer() then return end
-    logEntries = {}
-    checkCounter = 0
-    BenchTrackerDB.log = logEntries
-    BenchTrackerDB.checkCounter = 0
-    DEFAULT_CHAT_FRAME:AddMessage("|cFFFFFF00BenchTracker: Log cleared.|r")
-    BenchTracker:UpdateLogDisplay()
-end
-
-StaticPopupDialogs["BENCH_CONFIRM_DELETE"] = {
-    text = "Are you sure you want to delete this log entry?",
-    button1 = "Yes",
-    button2 = "No",
-    OnAccept = function()
-        if pendingDeleteIndex then
-            BenchTracker:DeleteLogEntry(pendingDeleteIndex)
-            pendingDeleteIndex = nil
-        end
-    end,
-    OnCancel = function()
-        pendingDeleteIndex = nil
-    end,
-    timeout = 0,
-    whileDead = true,
-    hideOnEscape = true,
-}
-
-function BenchTracker:DeleteLogEntry(index)
-    if index >= 1 and index <= table.getn(logEntries) then
-        table.remove(logEntries, index)
-        BenchTrackerDB.log = logEntries
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFFFFF00BenchTracker: Log entry deleted.|r")
-        BenchTracker:UpdateLogDisplay()
-    end
-end
-
-function BenchTracker:UpdateLogDisplay()
-    if not mainFrame or not mainFrame:IsVisible() then return end
-    if activeTab ~= "log" then return end
-
-    -- Show/hide Clear Log button based on officer status
-    if mainFrame.clearLogButton then
-        if BenchTracker:IsOfficer() then
-            mainFrame.clearLogButton:Show()
-        else
-            mainFrame.clearLogButton:Hide()
-        end
-    end
-
-    local scrollChild = mainFrame.logScrollChild
-    local isOfficer = BenchTracker:IsOfficer()
-
-    -- Hide all existing entry frames
-    for i = 1, table.getn(logEntryFrames) do
-        logEntryFrames[i]:Hide()
-    end
-    if emptyLogFS then emptyLogFS:Hide() end
-
-    local yOffset = 0
-    local entryIdx = 0
-
-    local function getEntryFrame()
-        entryIdx = entryIdx + 1
-        if not logEntryFrames[entryIdx] then
-            local ef = CreateFrame("Frame", "BenchLogEntryFrame" .. entryIdx, scrollChild)
-            ef:SetWidth(245)
-            ef:SetBackdrop({
-                bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-                edgeFile = nil, tile = true, tileSize = 16,
-                insets = {left = 0, right = 0, top = 0, bottom = 0}
-            })
-            ef:SetBackdropColor(0, 0, 0, 0)
-            ef:EnableMouse(true)
-            ef:SetScript("OnEnter", function()
-                this:SetBackdropColor(0.25, 0.28, 0.4, 0.35)
-            end)
-            ef:SetScript("OnLeave", function()
-                this:SetBackdropColor(0, 0, 0, 0)
-            end)
-            ef.fontStrings = {}
-            ef.fsCount = 0
-            ef.deleteBtn = nil
-            logEntryFrames[entryIdx] = ef
-        end
-        local ef = logEntryFrames[entryIdx]
-        for i = 1, table.getn(ef.fontStrings) do
-            ef.fontStrings[i]:Hide()
-        end
-        ef.fsCount = 0
-        if ef.deleteBtn then ef.deleteBtn:Hide() end
-        ef:ClearAllPoints()
-        ef:SetBackdropColor(0, 0, 0, 0)
-        ef:Show()
-        return ef
-    end
-
-    local function getEntryFS(ef)
-        ef.fsCount = ef.fsCount + 1
-        if not ef.fontStrings[ef.fsCount] then
-            ef.fontStrings[ef.fsCount] = ef:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        end
-        local fs = ef.fontStrings[ef.fsCount]
-        fs:ClearAllPoints()
-        fs:Show()
-        return fs
-    end
-
-    local function getEntryDeleteBtn(ef)
-        if not ef.deleteBtn then
-            local btn = CreateFrame("Button", nil, ef)
-            btn:SetWidth(12)
-            btn:SetHeight(12)
-            btn:SetBackdrop({
-                bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-                edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-                tile = true, tileSize = 8, edgeSize = 4,
-                insets = {left = 1, right = 1, top = 1, bottom = 1}
-            })
-            btn:SetBackdropColor(0.6, 0.15, 0.15, 0.8)
-            btn:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
-            local btnText = btn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-            btnText:SetPoint("CENTER", btn, "CENTER", 0, 0)
-            btnText:SetText("x")
-            btnText:SetTextColor(1, 1, 1, 1)
-            btn:SetScript("OnEnter", function()
-                this:SetBackdropColor(0.9, 0.2, 0.2, 1)
-                this:GetParent():SetBackdropColor(0.25, 0.28, 0.4, 0.35)
-                GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
-                GameTooltip:SetText("Delete this entry", 1, 0.3, 0.3)
-                GameTooltip:Show()
-            end)
-            btn:SetScript("OnLeave", function()
-                this:SetBackdropColor(0.6, 0.15, 0.15, 0.8)
-                this:GetParent():SetBackdropColor(0, 0, 0, 0)
-                GameTooltip:Hide()
-            end)
-            ef.deleteBtn = btn
-        end
-        ef.deleteBtn:ClearAllPoints()
-        ef.deleteBtn:Show()
-        return ef.deleteBtn
-    end
-
-    -- Render entries in reverse order (newest first)
-    local numEntries = table.getn(logEntries)
-    for idx = numEntries, 1, -1 do
-        local entry = logEntries[idx]
-        local ef = getEntryFrame()
-        local localY = 0
-
-        if entry.entryType == "afk" then
-            -- Header
-            local header = getEntryFS(ef)
-            header:SetPoint("TOPLEFT", ef, "TOPLEFT", 2, localY)
-            header:SetJustifyH("LEFT")
-            local headerWidth = 240
-            if isOfficer then
-                headerWidth = 220
-                local delBtn = getEntryDeleteBtn(ef)
-                delBtn:SetPoint("TOPRIGHT", ef, "TOPRIGHT", -2, localY)
-                delBtn.entryIndex = idx
-                delBtn:SetScript("OnClick", function()
-                    pendingDeleteIndex = this.entryIndex
-                    StaticPopup_Show("BENCH_CONFIRM_DELETE")
-                end)
-            end
-            header:SetWidth(headerWidth)
-            header:SetText("|cFFFFCC00" .. entry.timestamp .. " AFK Check #" .. entry.checkNum .. "|r")
-            header:SetTextColor(1, 0.8, 0, 1)
-            localY = localY - (GetWrappedHeight(header, headerWidth) + 2)
-
-            -- Ready list
-            if table.getn(entry.ready) > 0 then
-                local readyLabel = getEntryFS(ef)
-                readyLabel:SetPoint("TOPLEFT", ef, "TOPLEFT", 6, localY)
-                readyLabel:SetWidth(236)
-                readyLabel:SetJustifyH("LEFT")
-                local readyStr = "|cFF00CC00Ready:|r "
-                for i = 1, table.getn(entry.ready) do
-                    if i > 1 then readyStr = readyStr .. ", " end
-                    readyStr = readyStr .. entry.ready[i]
-                end
-                readyLabel:SetText(readyStr)
-                readyLabel:SetTextColor(0.8, 0.8, 0.8, 1)
-                localY = localY - (GetWrappedHeight(readyLabel, 236) + 2)
-            end
-
-            -- AFK list
-            if table.getn(entry.afk) > 0 then
-                local afkLabel = getEntryFS(ef)
-                afkLabel:SetPoint("TOPLEFT", ef, "TOPLEFT", 6, localY)
-                afkLabel:SetWidth(236)
-                afkLabel:SetJustifyH("LEFT")
-                local afkStr = "|cFFCC0000AFK:|r "
-                for i = 1, table.getn(entry.afk) do
-                    if i > 1 then afkStr = afkStr .. ", " end
-                    afkStr = afkStr .. entry.afk[i]
-                end
-                afkLabel:SetText(afkStr)
-                afkLabel:SetTextColor(0.8, 0.8, 0.8, 1)
-                localY = localY - (GetWrappedHeight(afkLabel, 236) + 2)
-            end
-
-        elseif entry.entryType == "ep" then
-            -- EP award header
-            local header = getEntryFS(ef)
-            header:SetPoint("TOPLEFT", ef, "TOPLEFT", 2, localY)
-            header:SetJustifyH("LEFT")
-            local headerWidth = 240
-            if isOfficer then
-                headerWidth = 220
-                local delBtn = getEntryDeleteBtn(ef)
-                delBtn:SetPoint("TOPRIGHT", ef, "TOPRIGHT", -2, localY)
-                delBtn.entryIndex = idx
-                delBtn:SetScript("OnClick", function()
-                    pendingDeleteIndex = this.entryIndex
-                    StaticPopup_Show("BENCH_CONFIRM_DELETE")
-                end)
-            end
-            header:SetWidth(headerWidth)
-            header:SetText("|cFF33BBFF" .. entry.timestamp .. " EP Award: +" .. entry.ep .. " EP|r")
-            header:SetTextColor(0.2, 0.7, 1, 1)
-            localY = localY - (GetWrappedHeight(header, headerWidth) + 2)
-
-            -- Player list
-            local playerLabel = getEntryFS(ef)
-            playerLabel:SetPoint("TOPLEFT", ef, "TOPLEFT", 6, localY)
-            playerLabel:SetWidth(236)
-            playerLabel:SetJustifyH("LEFT")
-            local pStr = ""
-            for i = 1, table.getn(entry.players) do
-                if i > 1 then pStr = pStr .. ", " end
-                pStr = pStr .. entry.players[i]
-            end
-            playerLabel:SetText(pStr)
-            playerLabel:SetTextColor(0.7, 0.7, 0.7, 1)
-            localY = localY - (GetWrappedHeight(playerLabel, 236) + 2)
-
-        elseif entry.entryType == "ep_individual" then
-            -- Individual EP adjust header
-            local header = getEntryFS(ef)
-            header:SetPoint("TOPLEFT", ef, "TOPLEFT", 2, localY)
-            header:SetJustifyH("LEFT")
-            local headerWidth = 240
-            if isOfficer then
-                headerWidth = 220
-                local delBtn = getEntryDeleteBtn(ef)
-                delBtn:SetPoint("TOPRIGHT", ef, "TOPRIGHT", -2, localY)
-                delBtn.entryIndex = idx
-                delBtn:SetScript("OnClick", function()
-                    pendingDeleteIndex = this.entryIndex
-                    StaticPopup_Show("BENCH_CONFIRM_DELETE")
-                end)
-            end
-            header:SetWidth(headerWidth)
-            local epSign = ""
-            if entry.ep >= 0 then epSign = "+" end
-            header:SetText("|cFFDDA0DD" .. entry.timestamp .. " EP Adjust: " .. entry.player .. " " .. epSign .. entry.ep .. " EP|r")
-            header:SetTextColor(0.87, 0.63, 0.87, 1)
-            localY = localY - (GetWrappedHeight(header, headerWidth) + 2)
-
-        end
-
-        -- Size and position entry frame
-        local entryHeight = math.abs(localY) + 4
-        ef:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 0, yOffset)
-        ef:SetHeight(entryHeight)
-        yOffset = yOffset - entryHeight
-    end
-
-    if numEntries == 0 then
-        if not emptyLogFS then
-            emptyLogFS = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        end
-        emptyLogFS:ClearAllPoints()
-        emptyLogFS:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 2, yOffset)
-        emptyLogFS:SetWidth(240)
-        emptyLogFS:SetJustifyH("LEFT")
-        emptyLogFS:SetText("|cFF666666No log entries yet.|r")
-        emptyLogFS:SetTextColor(0.4, 0.4, 0.4, 1)
-        emptyLogFS:Show()
-        yOffset = yOffset - (GetWrappedHeight(emptyLogFS, 240) + 2)
-    end
-
-    local contentHeight = math.abs(yOffset) + 10
-    scrollChild:SetHeight(contentHeight)
-    if mainFrame.logScrollFrame then
-        mainFrame.logScrollFrame:UpdateScrollChildRect()
-    end
-end
+end)
 
 ----------------------------------------------------------------
 -- SLASH COMMAND
@@ -1275,11 +478,10 @@ SlashCmdList["BENCH"] = function(msg)
         mainFrame:Hide()
     else
         mainFrame:Show()
-        -- Force immediate live-raid check when opening
         if WebLink_RefreshBenchLive then
             WebLink_RefreshBenchLive()
         end
-        BenchTracker:SwitchTab(activeTab)
+        BenchTracker:UpdateMemberDisplay()
     end
 end
 
@@ -1288,97 +490,27 @@ end
 ----------------------------------------------------------------
 local benchEventFrame = CreateFrame("Frame", "BenchEventFrame", UIParent)
 benchEventFrame:RegisterEvent("RAID_ROSTER_UPDATE")
-benchEventFrame:RegisterEvent("CHAT_MSG_GUILD")
-benchEventFrame:RegisterEvent("CHAT_MSG_RAID")
-benchEventFrame:RegisterEvent("CHAT_MSG_RAID_LEADER")
 benchEventFrame:RegisterEvent("ADDON_LOADED")
 
 benchEventFrame:SetScript("OnEvent", function()
     if event == "ADDON_LOADED" and arg1 == "shootyepgp" then
-        -- Load saved log data
-        if not BenchTrackerDB then
-            BenchTrackerDB = {}
-        end
-        if BenchTrackerDB.log then
-            logEntries = BenchTrackerDB.log
-        else
-            BenchTrackerDB.log = {}
-        end
-        if BenchTrackerDB.checkCounter then
-            checkCounter = BenchTrackerDB.checkCounter
-        else
-            BenchTrackerDB.checkCounter = 0
-        end
         DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00BenchTracker loaded! Type /bench to open.|r")
 
     elseif event == "RAID_ROSTER_UPDATE" then
-        if mainFrame and mainFrame:IsVisible() and activeTab == "afk" then
-            BenchTracker:UpdateAFKDisplay()
+        if mainFrame and mainFrame:IsVisible() then
+            BenchTracker:UpdateMemberDisplay()
         end
         -- Auto-sync bench roster if session is active
         if benchSessionActive then
             if GetNumRaidMembers() == 0 then
                 BenchTracker:EndBenchSession()
-                if mainFrame and mainFrame.benchRaidButtonText then
-                    mainFrame.benchRaidButtonText:SetText("Bench this Raid")
-                    mainFrame.benchRaidButtonText:SetTextColor(1, 0.85, 0.5, 1)
-                    mainFrame.benchRaidButton:SetBackdropColor(0.4, 0.2, 0.6, 0.9)
+                if mainFrame and mainFrame.benchButtonText then
+                    mainFrame.benchButtonText:SetText("Bench this Raid")
+                    mainFrame.benchButtonText:SetTextColor(1, 0.85, 0.5, 1)
+                    mainFrame.benchButton:SetBackdropColor(0.4, 0.2, 0.6, 0.9)
                 end
             else
                 BenchTracker:SendBenchRoster()
-            end
-        end
-
-    elseif event == "CHAT_MSG_GUILD" then
-        if isListening and arg1 and arg2 then
-            BenchTracker:OnChatMessage(arg2)
-        end
-
-    elseif event == "CHAT_MSG_RAID" or event == "CHAT_MSG_RAID_LEADER" then
-        if isListening and arg1 and arg2 then
-            BenchTracker:OnChatMessage(arg2)
-        end
-    end
-end)
-
-----------------------------------------------------------------
--- HOOK: EP AWARDS
-----------------------------------------------------------------
-local original_award_raid_ep = nil
-local original_award_reserve_ep = nil
-local original_givename_ep = nil
-local isBulkAward = false
-
-local epHookFrame = CreateFrame("Frame", "BenchEPHookFrame", UIParent)
-epHookFrame:RegisterEvent("ADDON_LOADED")
-epHookFrame:SetScript("OnEvent", function()
-    if event == "ADDON_LOADED" and arg1 == "shootyepgp" then
-        -- Hook after sepgp is available
-        if sepgp and sepgp.award_reserve_ep then
-            original_award_reserve_ep = sepgp.award_reserve_ep
-            sepgp.award_reserve_ep = function(self, ep)
-                isBulkAward = true
-                original_award_reserve_ep(self, ep)
-                isBulkAward = false
-                BenchTracker:LogEPAward(ep)
-            end
-        end
-        if sepgp and sepgp.award_raid_ep then
-            original_award_raid_ep = sepgp.award_raid_ep
-            sepgp.award_raid_ep = function(self, ep)
-                isBulkAward = true
-                original_award_raid_ep(self, ep)
-                isBulkAward = false
-                BenchTracker:LogEPAward(ep)
-            end
-        end
-        if sepgp and sepgp.givename_ep then
-            original_givename_ep = sepgp.givename_ep
-            sepgp.givename_ep = function(self, getname, ep)
-                original_givename_ep(self, getname, ep)
-                if not isBulkAward then
-                    BenchTracker:LogIndividualEP(getname, ep)
-                end
             end
         end
     end
