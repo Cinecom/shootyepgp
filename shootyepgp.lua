@@ -1495,11 +1495,10 @@ function sepgp:award_raid_ep(ep) -- awards ep to raid members in zone
   if GetNumRaidMembers()>0 then
     -- Safety: prevent double-award if another officer already awarded EP to this raid recently
     if self._lastRaidAwardReceived and (GetTime() - self._lastRaidAwardReceived) < 120 then
-      self:defaultPrint(string.format("|cffff0000Warning: EP was already awarded in the last 2 minutes. Award blocked to prevent double EP.|r"))
+      self:defaultPrint(string.format("|cffff0000Warning: Another officer already awarded EP to a raid in the last 2 minutes. Award blocked to prevent double EP.|r"))
       self:defaultPrint(string.format("|cffff0000If this was intentional, wait 2 minutes or /reload first.|r"))
       return
     end
-    self._lastRaidAwardReceived = GetTime() -- Block any re-award within 120 seconds (self + other officers)
     for i = 1, GetNumRaidMembers(true) do
       local name = GetRaidRosterInfo(i)
       if name then
@@ -1518,11 +1517,10 @@ function sepgp:award_reserve_ep(ep) -- awards ep to reserve list
   if table.getn(sepgp.reserves) > 0 then
     -- Safety: prevent double-award if another officer already awarded EP to reserves recently
     if self._lastReserveAwardReceived and (GetTime() - self._lastReserveAwardReceived) < 120 then
-      self:defaultPrint(string.format("|cffff0000Warning: EP was already awarded to reserves in the last 2 minutes. Award blocked to prevent double EP.|r"))
+      self:defaultPrint(string.format("|cffff0000Warning: Another officer already awarded EP to reserves in the last 2 minutes. Award blocked to prevent double EP.|r"))
       self:defaultPrint(string.format("|cffff0000If this was intentional, wait 2 minutes or /reload first.|r"))
       return
     end
-    self._lastReserveAwardReceived = GetTime() -- Block any re-award within 120 seconds (self + other officers)
     for i, reserve in ipairs(sepgp.reserves) do
       local name, class, rank, alt = unpack(reserve)
       self:givename_ep(name,ep,true)
