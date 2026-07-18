@@ -180,6 +180,32 @@ local prices = {
 [17076] = {300,"T1"}; --Bonereaver's Edge
 [92080] = {9999,"T1"}; --Molten Corehound
 
+--Trash Mobs
+[16817] = {67,"T1"}; --Girdle of Prophecy
+[16802] = {67,"T1"}; --Arcanist Belt
+[16806] = {67,"T1"}; --Felheart Belt
+[16827] = {67,"T1"}; --Nightslayer Belt
+[16828] = {67,"T1"}; --Cenarion Belt
+[16851] = {67,"T1"}; --Giantstalker's Belt
+[16838] = {67,"T1"}; --Earthfury Belt
+[16858] = {67,"T1"}; --Lawbringer Belt
+[16864] = {67,"T1"}; --Belt of Might
+[81260] = {175,"T1"}; --Lavashard Axe
+[16819] = {67,"T1"}; --Vambraces of Prophecy
+[16799] = {67,"T1"}; --Arcanist Bindings
+[16804] = {67,"T1"}; --Felheart Bracers
+[16825] = {67,"T1"}; --Nightslayer Bracelets
+[16830] = {67,"T1"}; --Cenarion Bracers
+[16850] = {67,"T1"}; --Giantstalker's Bracers
+[16840] = {67,"T1"}; --Earthfury Bracers
+[16857] = {67,"T1"}; --Lawbringer Bracers
+[16861] = {67,"T1"}; --Bracers of Might
+[81261] = {125,"T1"}; --Boots of Blistering Flames
+[81262] = {125,"T1"}; --Core Forged Helmet
+[81263] = {125,"T1"}; --Lost Dark Iron Chain
+[81264] = {125,"T1"}; --Shoulderpads of True Flight
+[81265] = {125,"T1"}; --Ashskin Belt
+
 
 ---------------------------
 --- Temple of Ahn'Qiraj ---
