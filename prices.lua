@@ -38,6 +38,31 @@ local prices = {
 [17109] = {125,"T1"}; --Choker of Enlightenment
 [16665] = {0,"T1"}; --Tome of Tranquilizing Shot
 
+--Magmadar
+[16814] = {125,"T1"}; --Pants of Prophecy
+[16796] = {125,"T1"}; --Arcanist Leggings
+[16810] = {125,"T1"}; --Felheart Pants
+[16835] = {125,"T1"}; --Cenarion Leggings
+[16843] = {125,"T1"}; --Earthfury Legguards
+[16855] = {125,"T1"}; --Lawbringer Legplates
+[16867] = {125,"T1"}; --Legplates of Might
+[16822] = {125,"T1"}; --Nightslayer Pants
+[16847] = {125,"T1"}; --Giantstalker's Leggings
+[17065] = {100,"T1"}; --Medallion of Steadfast Might
+[18829] = {125,"T1"}; --Deep Earth Spaulders
+[18823] = {125,"T1"}; --Aged Core Leather Gloves
+[19143] = {125,"T1"}; --Flameguard Gauntlets
+[19136] = {125,"T1"}; --Mana Igniting Cord
+[19144] = {67,"T1"}; --Sabatons of the Flamewalker
+[18824] = {67,"T1"}; --Magma Tempered Boots
+[18821] = {150,"T1"}; --Quick Strike Ring
+[18820] = {150,"T1"}; --Talisman of Ephemeral Power
+[19142] = {125,"T1"}; --Fire Runed Grimoire
+[17069] = {200,"T1"}; --Striker's Mark
+[18203] = {200,"T1"}; --Eskhandar's Right Claw
+[17073] = {200,"T1"}; --Earthshaker
+[18822] = {200,"T1"}; --Obsidian Edged Blade
+
 --Garr
 [17782] = {125,"T1"}; --Talisman of Binding Shard
 [18564] = {125,"T1"}; --Bindings of the Windseeker
