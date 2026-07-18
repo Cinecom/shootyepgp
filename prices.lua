@@ -25,7 +25,7 @@ local prices = {
 [18879] = {125,"T1"}; --Heavy Dark Iron Ring
 [19147] = {125,"T1"}; --Ring of Spell Power
 [17077] = {125,"T1"}; --Crimson Shocker
-[18878] = {200,"T1"}; --Sorcerous Dagger
+[18878] = {175,"T1"}; --Sorcerous Dagger
 [41988] = {0,"T1"}; --Molten Scale
 
 --Lucifron
@@ -56,10 +56,10 @@ local prices = {
 [19144] = {67,"T1"}; --Sabatons of the Flamewalker
 [18824] = {67,"T1"}; --Magma Tempered Boots
 [18821] = {150,"T1"}; --Quick Strike Ring
-[18820] = {150,"T1"}; --Talisman of Ephemeral Power
-[19142] = {125,"T1"}; --Fire Runed Grimoire
-[17069] = {200,"T1"}; --Striker's Mark
-[18203] = {200,"T1"}; --Eskhandar's Right Claw
+[18820] = {175,"T1"}; --Talisman of Ephemeral Power
+[19142] = {100,"T1"}; --Fire Runed Grimoire
+[17069] = {150,"T1"}; --Striker's Mark
+[18203] = {175,"T1"}; --Eskhandar's Right Claw
 [17073] = {250,"T1"}; --Earthshaker
 [18822] = {250,"T1"}; --Obsidian Edged Blade
 
@@ -76,9 +76,9 @@ local prices = {
 [17782] = {9999,"T1"}; --Talisman of Binding Shard
 [18564] = {9999,"T1"}; --Bindings of the Windseeker
 [17066] = {125,"T1"}; --Drillborer Disk
-[17071] = {200,"T1"}; --Gutgore Ripper
-[17105] = {200,"T1"}; --Aurastone Hammer
-[18832] = {200,"T1"}; --Brutality Blade
+[17071] = {175,"T1"}; --Gutgore Ripper
+[17105] = {175,"T1"}; --Aurastone Hammer
+[18832] = {175,"T1"}; --Brutality Blade
 
 --Baron Geddon
 [16797] = {125,"T1"}; --Arcanist Mantle
@@ -96,6 +96,30 @@ local prices = {
 [16831] = {125,"T1"}; --Cenarion Gloves
 [16801] = {125,"T1"}; --Arcanist Gloves
 [16852] = {125,"T1"}; --Giantstalker's Gloves
+
+--Sulfuron Harbinger
+[16816] = {125,"T1"}; --Mantle of Prophecy
+[16823] = {125,"T1"}; --Nightslayer Shoulder Pads
+[16848] = {125,"T1"}; --Giantstalker's Epaulets
+[16868] = {125,"T1"}; --Pauldrons of Might
+[17074] = {67,"T1"}; --Shadowstrike
+[17223] = {67,"T1"}; --Thunderstrike
+
+--Golemagg the Incinerator
+[16815] = {125,"T1"}; --Robes of Prophecy
+[16798] = {125,"T1"}; --Arcanist Robes
+[16809] = {125,"T1"}; --Felheart Robes
+[16820] = {125,"T1"}; --Nightslayer Chestpiece
+[16833] = {125,"T1"}; --Cenarion Vestments
+[16845] = {125,"T1"}; --Giantstalker's Breastplate
+[16841] = {125,"T1"}; --Earthfury Chestpiece
+[16853] = {125,"T1"}; --Lawbringer Chestguard
+[16865] = {125,"T1"}; --Breastplate of Might
+[17203] = {9999,"T1"}; --Sulfuron Ingot
+[17182] = {9999,"T1"}; --Sulfuras, Hand of Ragnaros
+[17072] = {125,"T1"}; --Blastershot Launcher
+[17103] = {200,"T1"}; --Azuresong Mageblade
+[18842] = {225,"T1"}; --Staff of Dominance
 
 
 ---------------------------
