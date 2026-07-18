@@ -165,19 +165,19 @@ local prices = {
 [16954] = {200,"T1"}; --Judgement Legplates
 [16962] = {200,"T1"}; --Legplates of Wrath
 [17204] = {9999,"T1"}; --Eye of Sulfuras
-[18817] = {200,"T1"}; --Crown of Destruction
+[18817] = {250,"T1"}; --Crown of Destruction
 [18814] = {200,"T1"}; --Choker of the Fire Lord
 [17102] = {175,"T1"}; --Cloak of the Shrouded Mists
 [17107] = {175,"T1"}; --Dragon's Blood Cape
-[19137] = {200,"T1"}; --Onslaught Girdle
-[17063] = {200,"T1"}; --Band of Accuria
-[19138] = {200,"T1"}; --Band of Sulfuras
+[19137] = {250,"T1"}; --Onslaught Girdle
+[17063] = {250,"T1"}; --Band of Accuria
+[19138] = {250,"T1"}; --Band of Sulfuras
 [18815] = {175,"T1"}; --Essence of the Pure Flame
 [17082] = {67,"T1"}; --Shard of the Flame
 [17106] = {67,"T1"}; --Malistar's Defender
 [18816] = {225,"T1"}; --Perdition's Blade
-[17104] = {300,"T1"}; --Spinal Reaper
-[17076] = {350,"T1"}; --Bonereaver's Edge
+[17104] = {325,"T1"}; --Spinal Reaper
+[17076] = {375,"T1"}; --Bonereaver's Edge
 [92080] = {9999,"T1"}; --Molten Corehound
 
 --Trash Mobs
