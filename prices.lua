@@ -35,7 +35,7 @@ local prices = {
 [16859] = {125,"T1"}; --Lawbringer Boots
 [16863] = {125,"T1"}; --Gauntlets of Might
 [16805] = {125,"T1"}; --Felheart Gloves
-[17109] = {125,"T1"}; --Choker of Enlightenment
+[17109] = {150,"T1"}; --Choker of Enlightenment
 [16665] = {0,"T1"}; --Tome of Tranquilizing Shot
 
 --Magmadar
