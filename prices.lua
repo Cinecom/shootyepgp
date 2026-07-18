@@ -60,8 +60,8 @@ local prices = {
 [19142] = {100,"T1"}; --Fire Runed Grimoire
 [17069] = {150,"T1"}; --Striker's Mark
 [18203] = {175,"T1"}; --Eskhandar's Right Claw
-[17073] = {250,"T1"}; --Earthshaker
-[18822] = {250,"T1"}; --Obsidian Edged Blade
+[17073] = {275,"T1"}; --Earthshaker
+[18822] = {275,"T1"}; --Obsidian Edged Blade
 
 --Garr
 [16813] = {125,"T1"}; --Circlet of Prophecy
@@ -119,7 +119,7 @@ local prices = {
 [17182] = {9999,"T1"}; --Sulfuras, Hand of Ragnaros
 [17072] = {125,"T1"}; --Blastershot Launcher
 [17103] = {175,"T1"}; --Azuresong Mageblade
-[18842] = {250,"T1"}; --Staff of Dominance
+[18842] = {275,"T1"}; --Staff of Dominance
 
 --Basalthar & Smoldaris
 [58212] = {125,"T1"}; --Treads of Scalding Rage
@@ -151,8 +151,8 @@ local prices = {
 [19140] = {150,"T1"}; --Cauterizing Band
 [18805] = {175,"T1"}; --Core Hound Tooth
 [18803] = {250,"T1"}; --Finkle's Lava Dredger
-[18703] = {250,"T1"}; --Ancient Petrified Leaf
-[18646] = {250,"T1"}; --The Eye of Divinity
+[18703] = {275,"T1"}; --Ancient Petrified Leaf
+[18646] = {275,"T1"}; --The Eye of Divinity
 
 --Ragnaros
 [16922] = {200,"T1"}; --Leggings of Transcendence
@@ -176,8 +176,8 @@ local prices = {
 [17082] = {67,"T1"}; --Shard of the Flame
 [17106] = {67,"T1"}; --Malistar's Defender
 [18816] = {225,"T1"}; --Perdition's Blade
-[17104] = {275,"T1"}; --Spinal Reaper
-[17076] = {300,"T1"}; --Bonereaver's Edge
+[17104] = {300,"T1"}; --Spinal Reaper
+[17076] = {350,"T1"}; --Bonereaver's Edge
 [92080] = {9999,"T1"}; --Molten Corehound
 
 --Trash Mobs
