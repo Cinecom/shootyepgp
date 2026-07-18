@@ -81,8 +81,13 @@ local prices = {
 [18832] = {200,"T1"}; --Brutality Blade
 
 --Baron Geddon
+[16797] = {125,"T1"}; --Arcanist Mantle
+[16807] = {125,"T1"}; --Felheart Shoulder Pads
+[16836] = {125,"T1"}; --Cenarion Spaulders
+[16844] = {125,"T1"}; --Earthfury Epaulets
 [16856] = {9999,"T1"}; --Lawbringer Spaulders
-[18563] = {125,"T1"}; --Bindings of the Windseeker
+[18563] = {9999,"T1"}; --Bindings of the Windseeker
+[17110] = {125,"T1"}; --Seal of the Archmagus
 
 
 ---------------------------
