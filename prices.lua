@@ -61,7 +61,7 @@ local prices = {
 [17069] = {150,"T1"}; --Striker's Mark
 [18203] = {175,"T1"}; --Eskhandar's Right Claw
 [17073] = {275,"T1"}; --Earthshaker
-[18822] = {275,"T1"}; --Obsidian Edged Blade
+[18822] = {300,"T1"}; --Obsidian Edged Blade
 
 --Garr
 [16813] = {125,"T1"}; --Circlet of Prophecy
@@ -119,7 +119,7 @@ local prices = {
 [17182] = {9999,"T1"}; --Sulfuras, Hand of Ragnaros
 [17072] = {125,"T1"}; --Blastershot Launcher
 [17103] = {175,"T1"}; --Azuresong Mageblade
-[18842] = {275,"T1"}; --Staff of Dominance
+[18842] = {300,"T1"}; --Staff of Dominance
 
 --Basalthar & Smoldaris
 [58212] = {125,"T1"}; --Treads of Scalding Rage
