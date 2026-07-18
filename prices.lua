@@ -5,7 +5,35 @@ local prices = {
 -------------------
 
 --Incindis
-[16812] = {0,"T1"}; --Gloves of Prophecy
+[16812] = {99,"T1"}; --Gloves of Prophecy
+[16826] = {99,"T1"}; --Nightslayer Gloves
+[16839] = {99,"T1"}; --Earthfury Gloves
+[16860] = {99,"T1"}; --Lawbringer Gauntlets
+[16849] = {99,"T1"}; --Giantstalker's Boots
+[16862] = {99,"T1"}; --Sabatons of Might
+[58205] = {99,"T1"}; --Primal Flameslinger
+[58206] = {67,"T1"}; --Idol of the Forgotten Wilds
+[58207] = {200,"T1"}; --Fist of the Flamewaker
+[58208] = {125,"T1"}; --Shroud of Flowing Magma
+[58209] = {125,"T1"}; --Sizzling Pyrestone Aureole
+[18870] = {125,"T1"}; --Helm of the Lifegiver
+[19145] = {125,"T1"}; --Robe of Volatile Power
+[19146] = {125,"T1"}; --Wristguards of Stability
+[18872] = {67,"T1"}; --Manastorm Leggings
+[18875] = {125,"T1"}; --Salamander Scale Pants
+[18861] = {67,"T1"}; --Flamewaker Legplates
+[18879] = {125,"T1"}; --Heavy Dark Iron Ring
+[19147] = {150,"T1"}; --Ring of Spell Power
+[17077] = {150,"T1"}; --Crimson Shocker
+[18878] = {200,"T1"}; --Sorcerous Dagger
+
+--Garr
+[17782] = {9999,"T1"}; --Talisman of Binding Shard
+[18564] = {9999,"T1"}; --Bindings of the Windseeker
+
+--Baron Geddon
+[16856] = {9999,"T1"}; --Lawbringer Spaulders
+[18563] = {9999,"T1"}; --Bindings of the Windseeker
 
 
 ---------------------------
