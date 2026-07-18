@@ -5,7 +5,7 @@ local prices = {
 -------------------
 
 --Incindis
-[16812] = {150,"T1"}; --Gloves of Prophecy
+[16812] = {0,"T1"}; --Gloves of Prophecy
 
 
 ---------------------------
