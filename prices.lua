@@ -60,8 +60,8 @@ local prices = {
 [19142] = {125,"T1"}; --Fire Runed Grimoire
 [17069] = {200,"T1"}; --Striker's Mark
 [18203] = {200,"T1"}; --Eskhandar's Right Claw
-[17073] = {200,"T1"}; --Earthshaker
-[18822] = {200,"T1"}; --Obsidian Edged Blade
+[17073] = {250,"T1"}; --Earthshaker
+[18822] = {250,"T1"}; --Obsidian Edged Blade
 
 --Garr
 [17782] = {125,"T1"}; --Talisman of Binding Shard
