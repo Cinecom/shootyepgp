@@ -118,8 +118,67 @@ local prices = {
 [17203] = {9999,"T1"}; --Sulfuron Ingot
 [17182] = {9999,"T1"}; --Sulfuras, Hand of Ragnaros
 [17072] = {125,"T1"}; --Blastershot Launcher
-[17103] = {200,"T1"}; --Azuresong Mageblade
-[18842] = {225,"T1"}; --Staff of Dominance
+[17103] = {175,"T1"}; --Azuresong Mageblade
+[18842] = {250,"T1"}; --Staff of Dominance
+
+--Basalthar & Smoldaris
+[58212] = {125,"T1"}; --Treads of Scalding Rage
+[58210] = {125,"T1"}; --Grasps of Sundering Power
+[58242] = {125,"T1"}; --Sulfuron Aegis
+[58238] = {175,"T1"}; --Runed Wardstone
+[58237] = {125,"T1"}; --Emberwoven Binding Garments
+[58215] = {125,"T1"}; --Ash-Forged Greaves
+[58241] = {67,"T1"}; --Totem of Eruption
+[58213] = {125,"T1"}; --Smoldaris’ Fractured Eye
+[58211] = {175,"T1"}; --Molten Emberstone
+[58239] = {125,"T1"}; --Overheated Skyrazors
+[58246] = {0,"T1"}; --Tablet of Molten Blast VI
+
+--Sorcerer-Thane Thaurissan
+[58243] = {125,"T1"}; --Leggings of the Deep Delve
+[58240] = {9999,"T1"}; --Libram of Final Judgement
+[58244] = {175,"T1"}; --Sigil of Ancient Accord
+[58214] = {175,"T1"}; --Modrag'zan, Heart of the Mountain
+
+--Majordomo Executus
+[19139] = {67,"T1"}; --Fireguard Shoulders
+[18810] = {125,"T1"}; --Wild Growth Spaulders
+[18811] = {125,"T1"}; --Fireproof Cloak
+[18808] = {125,"T1"}; --Gloves of the Hypnotic Flame
+[18809] = {125,"T1"}; --Sash of Whispered Secrets
+[18812] = {125,"T1"}; --Wristguards of True Flight
+[18806] = {9999,"T1"}; --Core Forged Greaves
+[19140] = {150,"T1"}; --Cauterizing Band
+[18805] = {175,"T1"}; --Core Hound Tooth
+[18803] = {250,"T1"}; --Finkle's Lava Dredger
+[18703] = {250,"T1"}; --Ancient Petrified Leaf
+[18646] = {250,"T1"}; --The Eye of Divinity
+
+--Ragnaros
+[16922] = {200,"T1"}; --Leggings of Transcendence
+[16915] = {200,"T1"}; --Netherwind Pants
+[16930] = {200,"T1"}; --Nemesis Leggings
+[16909] = {200,"T1"}; --Bloodfang Pants
+[16901] = {200,"T1"}; --Stormrage Legguards
+[16938] = {200,"T1"}; --Dragonstalker's Legguards
+[16946] = {200,"T1"}; --Legplates of Ten Storms
+[16954] = {200,"T1"}; --Judgement Legplates
+[16962] = {200,"T1"}; --Legplates of Wrath
+[17204] = {9999,"T1"}; --Eye of Sulfuras
+[18817] = {200,"T1"}; --Crown of Destruction
+[18814] = {200,"T1"}; --Choker of the Fire Lord
+[17102] = {175,"T1"}; --Cloak of the Shrouded Mists
+[17107] = {175,"T1"}; --Dragon's Blood Cape
+[19137] = {200,"T1"}; --Onslaught Girdle
+[17063] = {200,"T1"}; --Band of Accuria
+[19138] = {200,"T1"}; --Band of Sulfuras
+[18815] = {175,"T1"}; --Essence of the Pure Flame
+[17082] = {67,"T1"}; --Shard of the Flame
+[17106] = {67,"T1"}; --Malistar's Defender
+[18816] = {225,"T1"}; --Perdition's Blade
+[17104] = {275,"T1"}; --Spinal Reaper
+[17076] = {300,"T1"}; --Bonereaver's Edge
+[92080] = {9999,"T1"}; --Molten Corehound
 
 
 ---------------------------
