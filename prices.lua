@@ -15,18 +15,28 @@ local prices = {
 [58206] = {67,"T1"}; --Idol of the Forgotten Wilds
 [58207] = {200,"T1"}; --Fist of the Flamewaker
 [58208] = {100,"T1"}; --Shroud of Flowing Magma
-[58209] = {100,"T1"}; --Sizzling Pyrestone Aureole
+[58209] = {125,"T1"}; --Sizzling Pyrestone Aureole
 [18870] = {125,"T1"}; --Helm of the Lifegiver
 [19145] = {125,"T1"}; --Robe of Volatile Power
 [19146] = {125,"T1"}; --Wristguards of Stability
 [18872] = {67,"T1"}; --Manastorm Leggings
 [18875] = {125,"T1"}; --Salamander Scale Pants
 [18861] = {67,"T1"}; --Flamewaker Legplates
-[18879] = {100,"T1"}; --Heavy Dark Iron Ring
-[19147] = {100,"T1"}; --Ring of Spell Power
-[17077] = {99,"T1"}; --Crimson Shocker
+[18879] = {125,"T1"}; --Heavy Dark Iron Ring
+[19147] = {125,"T1"}; --Ring of Spell Power
+[17077] = {125,"T1"}; --Crimson Shocker
 [18878] = {200,"T1"}; --Sorcerous Dagger
 [41988] = {0,"T1"}; --Molten Scale
+
+--Lucifron
+[16800] = {125,"T1"}; --Arcanist Boots
+[16829] = {125,"T1"}; --Cenarion Boots
+[16837] = {125,"T1"}; --Earthfury Boots
+[16859] = {125,"T1"}; --Lawbringer Boots
+[16863] = {125,"T1"}; --Gauntlets of Might
+[16805] = {125,"T1"}; --Felheart Gloves
+[17109] = {125,"T1"}; --Choker of Enlightenment
+[16665] = {0,"T1"}; --Tome of Tranquilizing Shot
 
 --Garr
 [17782] = {125,"T1"}; --Talisman of Binding Shard
