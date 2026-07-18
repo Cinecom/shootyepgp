@@ -137,7 +137,7 @@ local prices = {
 --Sorcerer-Thane Thaurissan
 [58243] = {125,"T1"}; --Leggings of the Deep Delve
 [58240] = {9999,"T1"}; --Libram of Final Judgement
-[58244] = {175,"T1"}; --Sigil of Ancient Accord
+[58244] = {200,"T1"}; --Sigil of Ancient Accord
 [58214] = {175,"T1"}; --Modrag'zan, Heart of the Mountain
 
 --Majordomo Executus
