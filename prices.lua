@@ -64,8 +64,21 @@ local prices = {
 [18822] = {250,"T1"}; --Obsidian Edged Blade
 
 --Garr
-[17782] = {125,"T1"}; --Talisman of Binding Shard
-[18564] = {125,"T1"}; --Bindings of the Windseeker
+[16813] = {125,"T1"}; --Circlet of Prophecy
+[16795] = {125,"T1"}; --Arcanist Crown
+[16808] = {125,"T1"}; --Felheart Horns
+[16821] = {125,"T1"}; --Nightslayer Cover
+[16834] = {125,"T1"}; --Cenarion Helm
+[16846] = {125,"T1"}; --Giantstalker's Helmet
+[16842] = {125,"T1"}; --Earthfury Helmet
+[16854] = {125,"T1"}; --Lawbringer Helm
+[16866] = {125,"T1"}; --Helm of Might
+[17782] = {9999,"T1"}; --Talisman of Binding Shard
+[18564] = {9999,"T1"}; --Bindings of the Windseeker
+[17066] = {125,"T1"}; --Drillborer Disk
+[17071] = {200,"T1"}; --Gutgore Ripper
+[17105] = {200,"T1"}; --Aurastone Hammer
+[18832] = {200,"T1"}; --Brutality Blade
 
 --Baron Geddon
 [16856] = {9999,"T1"}; --Lawbringer Spaulders
