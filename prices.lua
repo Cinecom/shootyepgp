@@ -89,6 +89,14 @@ local prices = {
 [18563] = {9999,"T1"}; --Bindings of the Windseeker
 [17110] = {125,"T1"}; --Seal of the Archmagus
 
+--Shazzrah
+[16811] = {125,"T1"}; --Boots of Prophecy
+[16803] = {125,"T1"}; --Felheart Slippers
+[16824] = {125,"T1"}; --Nightslayer Boots
+[16831] = {125,"T1"}; --Cenarion Gloves
+[16801] = {125,"T1"}; --Arcanist Gloves
+[16852] = {125,"T1"}; --Giantstalker's Gloves
+
 
 ---------------------------
 --- Temple of Ahn'Qiraj ---
