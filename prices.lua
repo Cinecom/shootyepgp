@@ -225,6 +225,26 @@ local prices = {
 [33156] = {75,"T2"}; --Dragonhunter Javelin
 [33157] = {200,"T2"}; --Broodwarden's Bulwarkblade
 
+--Onyxia
+[16921] = {175,"T2"}; --Halo of Transcendence
+[16914] = {175,"T2"}; --Netherwind Crown
+[16929] = {175,"T2"}; --Nemesis Skullcap
+[16908] = {175,"T2"}; --Bloodfang Hood
+[16900] = {175,"T2"}; --Stormrage Cover
+[16939] = {175,"T2"}; --Dragonstalker's Helm
+[16947] = {175,"T2"}; --Helmet of Ten Storms
+[16955] = {175,"T2"}; --Judgement Crown
+[16963] = {175,"T2"}; --Helm of Wrath
+[18422] = {200,"T2"}; --Head of Onyxia
+[18205] = {200,"T2"}; --Eskhandar's Collar
+[17078] = {200,"T2"}; --Sapphiron Drape
+[18813] = {175,"T2"}; --Ring of Binding
+[17064] = {67,"T2"}; --Shard of the Scale
+[17067] = {175,"T2"}; --Ancient Cornerstone Grimoire
+[17068] = {200,"T2"}; --Deathbringer
+[17075] = {200,"T2"}; --Vis'kag the Bloodletter
+[30017] = {9999,"T2"}; --Onyxian Drake
+
 
 ---------------------------
 --- Temple of Ahn'Qiraj ---
