@@ -207,6 +207,25 @@ local prices = {
 [81265] = {125,"T1"}; --Ashskin Belt
 
 
+---------------------
+--- Onyxia's Lair ---
+---------------------
+
+--Broodcommander Axelus
+[33087] = {75,"T2"}; --Libram of Ardour
+[33089] = {75,"T2"}; --Totem of Thundercall
+[33098] = {75,"T2"}; --Idol of Equilibrium
+[33154] = {200,"T2"}; --Ring of Burning Talons
+[33149] = {125,"T2"}; --Battle Standard of the Broodcommander
+[33151] = {125,"T2"}; --Onyxian Brood Egg
+[33153] = {200,"T2"}; --Ignited Obsidian Scale
+[33150] = {350,"T2"}; --Yoxtez, Black Breath of the Dragonflight
+[33152] = {350,"T2"}; --Prestor's Rod of Command
+[33155] = {175,"T2"}; --Scaleshield of Obsidian Flight
+[33156] = {75,"T2"}; --Dragonhunter Javelin
+[33157] = {200,"T2"}; --Broodwarden's Bulwarkblade
+
+
 ---------------------------
 --- Temple of Ahn'Qiraj ---
 ---------------------------
