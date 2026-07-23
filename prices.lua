@@ -141,7 +141,7 @@ local prices = {
 [58214] = {150,"T1"}; --Modrag'zan, Heart of the Mountain
 
 --Majordomo Executus
-[19139] = {125,"T1"}; --Fireguard Shoulders
+[19139] = {67,"T1"}; --Fireguard Shoulders
 [18810] = {125,"T1"}; --Wild Growth Spaulders
 [18811] = {125,"T1"}; --Fireproof Cloak
 [18808] = {125,"T1"}; --Gloves of the Hypnotic Flame
