@@ -11,9 +11,9 @@ local prices = {
 [16860] = {125,"T1"}; --Lawbringer Gauntlets
 [16849] = {125,"T1"}; --Giantstalker's Boots
 [16862] = {125,"T1"}; --Sabatons of Might
-[58205] = {99,"T1"}; --Primal Flameslinger
-[58206] = {67,"T1"}; --Idol of the Forgotten Wilds
-[58207] = {175,"T1"}; --Fist of the Flamewaker
+[58205] = {50,"T1"}; --Primal Flameslinger
+[58206] = {50,"T1"}; --Idol of the Forgotten Wilds
+[58207] = {150,"T1"}; --Fist of the Flamewaker
 [58208] = {100,"T1"}; --Shroud of Flowing Magma
 [58209] = {125,"T1"}; --Sizzling Pyrestone Aureole
 [18870] = {125,"T1"}; --Helm of the Lifegiver
@@ -24,8 +24,8 @@ local prices = {
 [18861] = {67,"T1"}; --Flamewaker Legplates
 [18879] = {125,"T1"}; --Heavy Dark Iron Ring
 [19147] = {125,"T1"}; --Ring of Spell Power
-[17077] = {125,"T1"}; --Crimson Shocker
-[18878] = {175,"T1"}; --Sorcerous Dagger
+[17077] = {50,"T1"}; --Crimson Shocker
+[18878] = {150,"T1"}; --Sorcerous Dagger
 [41988] = {0,"T1"}; --Molten Scale
 
 --Lucifron
@@ -58,9 +58,9 @@ local prices = {
 [18821] = {150,"T1"}; --Quick Strike Ring
 [18820] = {200,"T1"}; --Talisman of Ephemeral Power
 [19142] = {125,"T1"}; --Fire Runed Grimoire
-[17069] = {150,"T1"}; --Striker's Mark
-[18203] = {175,"T1"}; --Eskhandar's Right Claw
-[17073] = {275,"T1"}; --Earthshaker
+[17069] = {50,"T1"}; --Striker's Mark
+[18203] = {150,"T1"}; --Eskhandar's Right Claw
+[17073] = {300,"T1"}; --Earthshaker
 [18822] = {300,"T1"}; --Obsidian Edged Blade
 
 --Garr
@@ -76,9 +76,9 @@ local prices = {
 [17782] = {9999,"T1"}; --Talisman of Binding Shard
 [18564] = {9999,"T1"}; --Bindings of the Windseeker
 [17066] = {125,"T1"}; --Drillborer Disk
-[17071] = {175,"T1"}; --Gutgore Ripper
-[17105] = {175,"T1"}; --Aurastone Hammer
-[18832] = {175,"T1"}; --Brutality Blade
+[17071] = {150,"T1"}; --Gutgore Ripper
+[17105] = {150,"T1"}; --Aurastone Hammer
+[18832] = {150,"T1"}; --Brutality Blade
 
 --Baron Geddon
 [16797] = {125,"T1"}; --Arcanist Mantle
@@ -117,28 +117,28 @@ local prices = {
 [16865] = {125,"T1"}; --Breastplate of Might
 [17203] = {9999,"T1"}; --Sulfuron Ingot
 [17182] = {9999,"T1"}; --Sulfuras, Hand of Ragnaros
-[17072] = {125,"T1"}; --Blastershot Launcher
-[17103] = {175,"T1"}; --Azuresong Mageblade
+[17072] = {50,"T1"}; --Blastershot Launcher
+[17103] = {150,"T1"}; --Azuresong Mageblade
 [18842] = {300,"T1"}; --Staff of Dominance
 
 --Basalthar & Smoldaris
 [58212] = {125,"T1"}; --Treads of Scalding Rage
 [58210] = {125,"T1"}; --Grasps of Sundering Power
-[58242] = {125,"T1"}; --Sulfuron Aegis
+[58242] = {150,"T1"}; --Sulfuron Aegis
 [58238] = {150,"T1"}; --Runed Wardstone
 [58237] = {125,"T1"}; --Emberwoven Binding Garments
 [58215] = {125,"T1"}; --Ash-Forged Greaves
 [58241] = {67,"T1"}; --Totem of Eruption
-[58213] = {125,"T1"}; --Smoldaris’ Fractured Eye
-[58211] = {175,"T1"}; --Molten Emberstone
-[58239] = {125,"T1"}; --Overheated Skyrazors
+[58213] = {150,"T1"}; --Smoldaris’ Fractured Eye
+[58211] = {200,"T1"}; --Molten Emberstone
+[58239] = {50,"T1"}; --Overheated Skyrazors
 [58246] = {0,"T1"}; --Tablet of Molten Blast VI
 
 --Sorcerer-Thane Thaurissan
 [58243] = {125,"T1"}; --Leggings of the Deep Delve
 [58240] = {9999,"T1"}; --Libram of Final Judgement
 [58244] = {200,"T1"}; --Sigil of Ancient Accord
-[58214] = {175,"T1"}; --Modrag'zan, Heart of the Mountain
+[58214] = {150,"T1"}; --Modrag'zan, Heart of the Mountain
 
 --Majordomo Executus
 [19139] = {67,"T1"}; --Fireguard Shoulders
@@ -150,9 +150,9 @@ local prices = {
 [18806] = {9999,"T1"}; --Core Forged Greaves
 [19140] = {150,"T1"}; --Cauterizing Band
 [18805] = {175,"T1"}; --Core Hound Tooth
-[18803] = {250,"T1"}; --Finkle's Lava Dredger
-[18703] = {275,"T1"}; --Ancient Petrified Leaf
-[18646] = {275,"T1"}; --The Eye of Divinity
+[18803] = {300,"T1"}; --Finkle's Lava Dredger
+[18703] = {300,"T1"}; --Ancient Petrified Leaf
+[18646] = {300,"T1"}; --The Eye of Divinity
 
 --Ragnaros
 [16922] = {200,"T1"}; --Leggings of Transcendence
